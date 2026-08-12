@@ -8811,46 +8811,61 @@ sint32 Player::CountCityHappiness(sint32 &rioting, sint32 &content, sint32 &happ
 // Remark(s)  : -
 //
 //----------------------------------------------------------------------------
+// Helper: safely get the civ DB record for this player's civ+gov combo.
+// Returns nullptr if the index is out of range (e.g. stale save).
+static inline const CivilisationRecord *GetCivRec(const Player *p, const Civilisation *civ, sint32 govType)
+{
+	return g_theCivilisationDB->Get(civ->GetCivilisation(), govType);
+}
+
 sint32 Player::CityHappinessIncrease() const
 {
-	return g_theCivilisationDB->Get(m_civilisation->GetCivilisation(), m_government_type)->GetHappyInc();
+	const CivilisationRecord *rec = GetCivRec(this, m_civilisation, m_government_type);
+	return rec ? rec->GetHappyInc() : 0;
 }
 
 sint32 Player::CivHappinessIncrease() const
 {
-	return g_theCivilisationDB->Get(m_civilisation->GetCivilisation(), m_government_type)->GetHappyInc();
-
+	const CivilisationRecord *rec = GetCivRec(this, m_civilisation, m_government_type);
+	return rec ? rec->GetHappyInc() : 0;
 }
 
 sint32 Player::CivProductionBonus() const
 {
-	return g_theCivilisationDB->Get(m_civilisation->GetCivilisation(), m_government_type)->GetProductionBonus();
+	const CivilisationRecord *rec = GetCivRec(this, m_civilisation, m_government_type);
+	return rec ? rec->GetProductionBonus() : 0;
 }
 
 sint32 Player::CivFoodBonus() const
 {
-	return g_theCivilisationDB->Get(m_civilisation->GetCivilisation(), m_government_type)->GetFoodBonus();
+	const CivilisationRecord *rec = GetCivRec(this, m_civilisation, m_government_type);
+	return rec ? rec->GetFoodBonus() : 0;
 }
 
 sint32 Player::CivCommerceBonus() const
 {
-	return g_theCivilisationDB->Get(m_civilisation->GetCivilisation(), m_government_type)->GetCommerceBonus();
+	const CivilisationRecord *rec = GetCivRec(this, m_civilisation, m_government_type);
+	return rec ? rec->GetCommerceBonus() : 0;
 }
 
 sint32 Player::CivScienceBonus() const
 {
-	return g_theCivilisationDB->Get(m_civilisation->GetCivilisation(), m_government_type)->GetScienceBonus();
+	const CivilisationRecord *rec = GetCivRec(this, m_civilisation, m_government_type);
+	return rec ? rec->GetScienceBonus() : 0;
 }
 
 sint32 Player::CivBoatBonus() const
 {
-	return g_theCivilisationDB->Get(m_civilisation->GetCivilisation(), m_government_type)->GetIncreaseBoatMovement();
+	const CivilisationRecord *rec = GetCivRec(this, m_civilisation, m_government_type);
+	return rec ? rec->GetIncreaseBoatMovement() : 0;
 }
 
 sint32 Player::CivHpBonus() const
 {
 	// Replace this with GetCivDBRec
-	return g_theCivilisationDB->Get(m_civilisation->GetCivilisation(), m_government_type)->GetIncreaseHp();
+	const CivilisationRecord *rec = g_theCivilisationDB->Get(m_civilisation->GetCivilisation(), m_government_type);
+	if (!rec) return 0;
+	return rec->GetIncreaseHp();
 }
 
 sint16 Player::GetCargoCapacity() const

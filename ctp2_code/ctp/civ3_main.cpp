@@ -184,6 +184,7 @@
 #endif // _DEBUG
 
 #include "SlicSegment.h"    // SlicSegment::Cleanup
+#include "SlicEngine.h"     // g_slicEngine->RunUITriggers (WM_COPYDATA inject)
 
 extern Background *     g_background;
 
@@ -1835,6 +1836,24 @@ void DoFinalCleanup(int exitCode)
 
 #define k_MSWHEEL_ROLLMSG		0xC7AF
 
+// MoM headless-playtest UI-trigger injection (2026-07-18, v2). An earlier
+// attempt pushed synthetic SDL_MOUSEBUTTON events from WndProc via
+// SDL_PushEvent -- that was reentrant-unsafe (WndProc runs INSIDE
+// ManipulateInputs' own SDL_PumpEvents, so it fed the mouse buffer mid-drain,
+// behind the drain's mutex) and never reliably drove a button; it is REMOVED.
+//
+// This replacement fires a named SLIC UI trigger the SAFE way: an external
+// tool (uiwalk.py) SendMessage's a WM_COPYDATA carrying the LDL control path
+// string (e.g. "ControlPanelWindow.ControlPanel.ShortcutPad.MagicButton");
+// WndProc hands it to SlicEngine::RunUITriggers, which merely ENQUEUES a
+// SlicObject onto m_uiExecuteObjects. The main loop
+// (CivApp::ProcessSLIC -> SlicEngine::ProcessUITriggers) drains and Executes
+// it -- the exact code path a real left-click takes (HandleGameSpecificLeftClick
+// -> RunUITriggers). No reentrancy, no coordinates, no cursor touched: it is
+// headless verification of any `trigger 'X' on "control" when(...)` handler.
+// dwData MUST equal k_INJECT_UITRIGGER_MAGIC; lpData is the control-path string.
+#define k_INJECT_UITRIGGER_MAGIC	0x4D4F4D31	// 'MOM1'
+
 #if defined(__AUI_USE_SDL__)
 int SDLMessageHandler(void* userdata, SDL_Event* event)
 {
@@ -2088,6 +2107,26 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 		DestroyWindow(hwnd);
 		gHwnd = NULL;
 		return 0;
+
+	case WM_COPYDATA:
+		{
+			// Headless UI-trigger injection (see the k_INJECT_UITRIGGER_MAGIC
+			// note above). Enqueue-only via RunUITriggers -> the main loop
+			// executes it. Safe from WndProc; no reentrancy.
+			COPYDATASTRUCT * cds = (COPYDATASTRUCT *)lParam;
+			if (cds && cds->dwData == k_INJECT_UITRIGGER_MAGIC
+			    && cds->lpData && cds->cbData && g_slicEngine)
+			{
+				char nameBuf[512];
+				DWORD n = (cds->cbData < sizeof(nameBuf) - 1)
+				          ? cds->cbData : (DWORD)(sizeof(nameBuf) - 1);
+				memcpy(nameBuf, cds->lpData, n);
+				nameBuf[n] = 0;
+				g_slicEngine->RunUITriggers(nameBuf);
+				return TRUE;
+			}
+		}
+		break;
 
 	case k_MSWHEEL_ROLLMSG :
 		{

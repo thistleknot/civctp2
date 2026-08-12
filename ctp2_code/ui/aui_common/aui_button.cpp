@@ -68,6 +68,15 @@ AUI_ERRCODE aui_Button::InitCommon(void)
 	return AUI_ERRCODE_OK;
 }
 
+// MoM headless driver: fire the button's action as a completed press.
+void aui_Button::InjectPress( void )
+{
+	if ( m_ActionFunc )
+		m_ActionFunc( this, AUI_BUTTON_ACTION_EXECUTE, 0, m_cookie );
+	else if ( m_action )
+		m_action->Execute( this, AUI_BUTTON_ACTION_EXECUTE, 0 );
+}
+
 AUI_ERRCODE aui_Button::ResetThis( void )
 {
 	m_isRepeating = false;

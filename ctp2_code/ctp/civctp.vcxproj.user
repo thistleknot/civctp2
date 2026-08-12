@@ -7,6 +7,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-SDL|Win32'">
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommand>H:\Games\civctp2\ctp2_code\ctp\ctp2-dbg.exe</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>H:\Program Files(x86)\Activision\Call To Power 2\ctp2_program\ctp</LocalDebuggerWorkingDirectory>
     <LocalDebuggerCommandArguments />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

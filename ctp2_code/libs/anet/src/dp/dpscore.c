@@ -292,7 +292,7 @@ DP_API dp_result_t DP_APIX dpReportScore2(dp_t *dp, dpid_t dpId, sint32 scoreId,
 		/* set a playerHdl to param_value2 base on the given dpId */
 		req.param_value2 = (sint32)dpid2commHdl(dp, dpId);
 		req.reqLen = sizeof(commSetParamReq_t);
-		commSetParam(&req, &resp, dp->dpio->commPtr);
+		commSetParam(&req, &resp);
 		/* Driver usually returns status dp_RES_OK or dp_RES_UNIMPLEMENTED */
 		DPRINT(("dpReportScore2: driver reports err:%d for scoreId %d\n",
 				resp.status, scoreId));
@@ -503,3 +503,4 @@ dpid_t dpGetMyId(dp_t *dp)
 	}
 	return (dpid_t)dpMAKESHORT(subkey[0], subkey[1]);
 }
+

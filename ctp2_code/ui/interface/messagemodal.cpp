@@ -297,19 +297,6 @@ AUI_ERRCODE MessageModal::CreateResponses( const MBCHAR *ldlBlock )
 
 		m_messageModalResponseButton->AddTail( button );
 
-
-		if ( lastbutton ) {
-			button->Move( lastbutton->X() -
-						  button->Width() -
-						  k_MODAL_BUTTON_SPACING, button->Y() );
-		} else {
-
-
-
-
-			button->Move(Width() - button->Width() - k_MODAL_BUTTON_SPACING - button->GetDim()->HorizontalPositionData(), button->Y());
-		}
-
 		MessageModalResponseAction	* action =
             new MessageModalResponseAction( &m_message, responseCount );
 		Assert( action != NULL );
@@ -322,6 +309,15 @@ AUI_ERRCODE MessageModal::CreateResponses( const MBCHAR *ldlBlock )
 		AddControl( button );
 
 		button->ResetThis();
+
+		// Horizontal layout (engine anchors override Move(), so vertical is not feasible)
+		if ( lastbutton ) {
+			button->Move( lastbutton->X() -
+						  button->Width() -
+						  k_MODAL_BUTTON_SPACING, button->Y() );
+		} else {
+			button->Move(Width() - button->Width() - k_MODAL_BUTTON_SPACING - button->GetDim()->HorizontalPositionData(), button->Y());
+		}
 
 		lastbutton = button;
 

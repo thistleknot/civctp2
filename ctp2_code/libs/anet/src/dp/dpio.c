@@ -815,7 +815,7 @@ DP_API sint32 dpio_scanAdr(dpio_t *dpio, char *hostname, char *adrbuf, size_t bu
 	req.address = adrbuf;
 	memset(adrbuf, 0, buflen);
 	DPRINT(("dpio_scanAdr(%s,%p,%d):\n", hostname, adrbuf, buflen));
-	if (!commScanAddr(&req, &resp, dpio->commPtr)) {
+	if (!commScanAddr(&req, &resp)) {
 		DPRINT(("dpio_scanAdr: Unable to commScanAddr %s, status:%d\n", hostname, resp.status));
 		dpio_assertValid(dpio);
 		return 0;
@@ -856,7 +856,7 @@ DP_API dp_result_t dpio_printAdr(dpio_t *dpio, const char *adrbuf, size_t adrlen
 	req.size = buflen;
 
 	DPRINT(("dpio_printAdr(%p,%d,):\n", adrbuf, adrlen));
-	if (!commPrintAddr(&req, &resp, dpio->commPtr)) {
+	if (!commPrintAddr(&req, &resp)) {
 		DPRINT(("dpio_printAdr: Unable to commPrintAddr, status:%d\n", resp.status));
 		dpio_assertValid(dpio);
 		return dp_RES_BAD;
@@ -900,7 +900,7 @@ playerHdl_t dpio_openHdlRaw2(dpio_t *dpio, void *adr, void *adr2, sint32 flags)
 	cshReq.flags = 0;
 	cshReq.flags |= (flags & dpio_OPENHDL_RAW_2NDLIVE) ? comm_SAYHI_2NDLIVE : 0;
 
-	if (!commSayHi( &cshReq, &cshResp, dpio->commPtr ))
+	if (!commSayHi( &cshReq, &cshResp ))
 	{
 		DPRINT(("dpio_openHdlRaw: adr "));
 		dpio_dprintAdr((char *) adr, dpio->myAdrLen);
@@ -934,7 +934,7 @@ dp_result_t dpio_closeHdlRaw(dpio_t *dpio, playerHdl_t h)
 	commSayByeResp_t	csbResp;
 
 	csbReq.player = h;
-	if (!commSayBye( &csbReq, &csbResp, dpio->commPtr )) {
+	if (!commSayBye( &csbReq, &csbResp )) {
 		DPRINT(("dpio_closeHdlRaw: %d failed, status:%3u\n", h, csbResp.status));
 		return dp_RES_BAD;
 	}
@@ -986,7 +986,7 @@ dpio_freezeHdl(
 	/* write addresses */
 	req.player = hdl;
 	memset(&resp, 0x00, sizeof (resp));
-	if (!commPlayerInfo(&req, &resp, dpio->commPtr)) {
+	if (!commPlayerInfo(&req, &resp)) {
 		DPRINT(("dpio_freezehdl: commPlayerInfo failed. status %d\n", resp.status));
 		return dp_RES_BAD;
 	}
@@ -1367,7 +1367,7 @@ void dpio_set_clocks(dpio_t *dpio, sint32 clocksPerSec)
 	req.reqLen = sizeof(commSetParamReq_t);
 	req.param_num = comm_PARAM_TICKSPERSEC;
 	req.param_value = (182L * clocksPerSec) / (10 * ECLOCKS_PER_SEC);
-	if (!commSetParam(&req, &resp, dpio->commPtr))
+	if (!commSetParam(&req, &resp))
 		DPRINT(("dpio_set_clocks: driver couldn't set tickspersec, status %d\n", resp.status));
 #endif
 
@@ -1441,7 +1441,7 @@ dp_result_t dpio_hdl2adr2(dpio_t *dpio, playerHdl_t h, void *adr, void *adr2, si
 
 	req.player = h;
 	memset(&resp, 0x00, sizeof (resp));
-	if (!commPlayerInfo(&req, &resp, dpio->commPtr))
+	if (!commPlayerInfo(&req, &resp))
 	{
 		DPRINT(("dpio_hdl2adr: commPlayerInfo failed. status %d\n", resp.status));
 		return dp_RES_BAD;
@@ -1487,7 +1487,7 @@ dp_result_t dpio_hdl2name(dpio_t *dpio, playerHdl_t h, char *name, size_t name_s
 
 	req.player = h;
 	memset(&resp, 0x00, sizeof (resp));
-	if (!commPlayerInfo(&req, &resp, dpio->commPtr)) {
+	if (!commPlayerInfo(&req, &resp)) {
 		DPRINT(("dpio_hdl2name: commPlayerInfo failed. status %d\n",resp.status));
 		return dp_RES_BAD;
 	}
@@ -1516,7 +1516,7 @@ void dpio_destroy(dpio_t *dpio, sint32 flags)
 	/* Shut down transport */
 	req.flags = flags;
 	DPRINT(("dpio_destroy: commTerm\n"));
-	commTerm(&req, NULL, dpio->commPtr);	/* This line must come before you unload the DLL - KA 1-29-95 */
+	commTerm(&req, NULL);	/* This line must come before you unload the DLL - KA 1-29-95 */
 
 	/* Unload transport */
 	DPRINT(("dpio_destroy: t:%d unload DLL\n", *dpio->now));
@@ -1690,10 +1690,10 @@ dp_result_t dpio_create(dpio_t **pdpio, const dp_transport_t *transportDLLname,
 		paramReq.param_num = comm_PARAM_DPRINTF;
 		paramReq.param_pointer = dp_dprintf;
 		paramReq.reqLen = sizeof(paramReq);
-		ok = commSetParam(&paramReq, NULL, dpio->commPtr);
+		ok = commSetParam(&paramReq, NULL);
 		DPRINT(("dpio_create: before commInit: commSetParam (comm_PARAM_DPRINTF,) returns ok=%d\n", ok));
 	}
-	if (!commInit(&dpio->commInitReq, &commInitResp, dpio->commPtr)) {
+	if (!commInit(&dpio->commInitReq, &commInitResp)) {
 		DPRINT(("Unable to init comm system, error: %d\n", commInitResp.status));
 		dpUnloadDLL(dpio);
 		dp_FREE(dpio);
@@ -1723,7 +1723,7 @@ dp_result_t dpio_create(dpio_t **pdpio, const dp_transport_t *transportDLLname,
 		paramReq.param_num = comm_PARAM_DPRINTF;
 		paramReq.param_pointer = dp_dprintf;
 		paramReq.reqLen = sizeof(paramReq);
-		ok = commSetParam(&paramReq, NULL, dpio->commPtr);
+		ok = commSetParam(&paramReq, NULL);
 		DPRINT(("dpio_create: commSetParam (comm_PARAM_DPRINTF,) returns ok=%d\n", ok));
 	}
 
@@ -1733,7 +1733,7 @@ dp_result_t dpio_create(dpio_t **pdpio, const dp_transport_t *transportDLLname,
 	/* Save capability bits for later.  Hmm.  Should just make these part of
 	 * commInit...
 	 */
-	if (!commDriverInfo(NULL, &commInfoResp, dpio->commPtr)) {
+	if (!commDriverInfo(NULL, &commInfoResp)) {
 		DPRINT(("dpio_create: Unable to get comm info, status:%d\n", commInfoResp.status));
 		return dp_RES_BUG;
 	}
@@ -1898,7 +1898,7 @@ dp_result_t dpio_create(dpio_t **pdpio, const dp_transport_t *transportDLLname,
 				scanReq.size = dp_MAX_ADR_LEN;
 				scanReq.printable = ptr;
 
-				if (!commScanAddr(&scanReq, &scanResp, dpio->commPtr) || scanResp.status != comm_STATUS_OK) {
+				if (!commScanAddr(&scanReq, &scanResp) || scanResp.status != comm_STATUS_OK) {
 					DPRINT(("dpio_create: could not translate address \"%s\"\n", ptr));
 				} else {
 					/*
@@ -3152,7 +3152,7 @@ static dp_result_t dpio_getRaw(
 		rxPktReq.buffer = dpio->rxGatherBuf;
 		rxPktReq.size = dpio_MAXLEN_GATHER;
 		ptimer_Enter(PTIMER_DPIO_NETWORK_GET, "commRxPkt timer");
-		commRxPkt(&rxPktReq, &rxPktResp, dpio->commPtr);
+		commRxPkt(&rxPktReq, &rxPktResp);
 		ptimer_Exit(PTIMER_DPIO_NETWORK_GET, 0);
 
 		if (rxPktResp.status == comm_STATUS_OK) {
@@ -4133,7 +4133,7 @@ static dp_result_t dpio_put_unreliable_unbuffered(dpio_t *dpio, playerHdl_t dest
 	txPktReq.dest = dest;
 	txPktReq.buffer = buffer;
 	txPktReq.length = size;
-	commTxPkt(&txPktReq,&txPktResp, dpio->commPtr);
+	commTxPkt(&txPktReq,&txPktResp);
 
 	DPRINT(("dpio_put_unreliable_unbuffered: t:%d tag %2.2s ln %d sent to h:%x, status %d\n", *dpio->now, buffer, size, dest, txPktResp.status));
 
@@ -5029,3 +5029,4 @@ static void dpio_log_pkt(const uint8 *pkt, size_t len, sint32 repeatct)
 	}
 }
 #endif
+
