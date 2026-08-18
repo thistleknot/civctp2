@@ -992,6 +992,17 @@ void SlicEngine::AddBuiltinFunctions()
 	m_functionHash->Add(new Slic_UnitMovementLeft);
 	m_functionHash->Add(new Slic_GetStoredProduction);
 
+	// Unit stat modifier builtins
+	m_functionHash->Add(new Slic_ModifyUnitStat);
+	m_functionHash->Add(new Slic_ClearUnitBuffs);
+	m_functionHash->Add(new Slic_HealUnit);
+	m_functionHash->Add(new Slic_GetUnitHP);
+	m_functionHash->Add(new Slic_GetUnitMaxHP);
+
+	// Script-driven targeting
+	m_functionHash->Add(new Slic_BeginTargetMode);
+	m_functionHash->Add(new Slic_IsTargetModeActive);
+
 }
 
 void SlicEngine::Link()
@@ -2094,8 +2105,15 @@ void SlicEngine::RunUITriggers(const MBCHAR *controlName)
 	if(trig) {
 		SlicSegment *seg = trig->GetSegment();
 		if(seg && seg->IsEnabled()) {
-			m_uiExecuteObjects->AddTail(new SlicObject(seg));
-
+			SlicObject * obj = new SlicObject(seg);
+			// MoM (2026-07-18): give the enqueued UI-trigger object a valid
+			// player context so g.player resolves inside the handler body --
+			// RunHelpTriggers already does exactly this; RunUITriggers omitted
+			// it, so g.player was undefined for `trigger ... on "..."` bodies
+			// (e.g. MomOpenSpellbook's Message(g.player,...) went nowhere).
+			if (g_selected_item)
+				obj->AddRecipient(g_selected_item->GetVisiblePlayer());
+			m_uiExecuteObjects->AddTail(obj);
 		}
 	}
 }

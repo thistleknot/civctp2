@@ -113,6 +113,7 @@
 #include "message.h"
 
 #include "cursormanager.h"
+#include "ScriptTargetMode.h"
 #include "debugwindow.h"
 
 #include "c3cmdline.h"
@@ -1642,6 +1643,8 @@ void ControlPanelWindow::TargetingMode()
 	case	CP_TARGETING_MODE_TERRAFORM_PENDING:
 			TerraFormUpdate();
 			break;
+	case	CP_TARGETING_MODE_SCRIPT_PENDING:
+			break;
 	default:
 			ClearTargetingMode();
 	}
@@ -1810,6 +1813,8 @@ bool ControlPanelWindow::ExecuteTargetingModeClick(const MapPoint &pos)
 			return TileImpClick(pos);
 	case	CP_TARGETING_MODE_TERRAFORM_PENDING:
 			return TerraFormClick(pos);
+	case	CP_TARGETING_MODE_SCRIPT_PENDING:
+			return ScriptTargetClick(pos);
 	default:
 			ClearTargetingMode();
 	}
@@ -1967,6 +1972,11 @@ void ControlPanelWindow::ClearTargetingMode()
 	m_currentTerrainRec    = NULL;
 	m_currentTerrainImpRec = NULL;
 
+	// Deactivate script targeting if it was active (avoid recursion — just
+	// reset the flag, don't call Cancel() which calls back into us)
+	if(g_scriptTargetMode && g_scriptTargetMode->IsActive())
+		g_scriptTargetMode->Deactivate();
+
 	if(g_cursorManager)
 		g_cursorManager->SetCursor(CURSORINDEX_DEFAULT);
 
@@ -1976,6 +1986,19 @@ void ControlPanelWindow::ClearTargetingMode()
 	g_tiledMap->GetMouseTilePos(pos);
 	tileimptracker_DisplayData(pos, -1);
 	specialAttackWindow_DisplayData(pos, -1);
+}
+
+void ControlPanelWindow::SetScriptTargetingMode()
+{
+	m_targetingMode = CP_TARGETING_MODE_SCRIPT_PENDING;
+}
+
+bool ControlPanelWindow::ScriptTargetClick(const MapPoint &pos)
+{
+	if (g_scriptTargetMode)
+		return g_scriptTargetMode->HandleClick(pos);
+	ClearTargetingMode();
+	return false;
 }
 
 void ControlPanelWindow::CreateTabGroup(const MBCHAR *ldlBlock)
@@ -2447,7 +2470,7 @@ void ControlPanelWindow::CreateTileImpBanks()
 				thePaneLDL = "tfLandButtonBank";
 				group_id = CP_TERRAFORM_LAND;
 
-				sint32 col = 0;
+				sint32 col;
 				timpRec->GetColumn(col);
 				column = (uint32)col;
 			}
@@ -2459,7 +2482,7 @@ void ControlPanelWindow::CreateTileImpBanks()
 				thePaneLDL = "tfOceanButtonBank";
 				group_id = CP_TERRAFORM_OCEAN;
 
-				sint32 col = 0;
+				sint32 col;
 				timpRec->GetColumn(col);
 				column = (uint32)col;
 			}

@@ -326,6 +326,12 @@ void UnitData::Create(const sint32 t,
 	m_fuel            = CalculateTotalFuel();
 	m_movement_points = CalculateTotalMovePoints();
 
+	// Stat modifier overlays start at zero
+	m_attackMod  = 0;
+	m_defenseMod = 0;
+	m_hpMaxMod   = 0;
+	m_moveMod    = 0;
+
 	// PFT 17 Mar 05, don't FIRST_MOVE flag immobile units
 	if( !IsImmobile() )
 		SetFlag(k_UDF_FIRST_MOVE);
@@ -372,6 +378,10 @@ UnitData::UnitData(CivArchive &archive) : GameObj(0)
 	m_sprite_state = NULL;
 	m_lesser = NULL;
 	m_greater = NULL;
+
+	// Stat modifier overlays are runtime-only and are not serialized, so they
+	// must be zeroed here: Serialize() will not assign them on load.
+	ClearBuffs();
 
 	Serialize(archive);
 }
@@ -1250,6 +1260,9 @@ double UnitData::GetAttack(const UnitRecord *rec, const Unit defender) const
 
 	double				base	= rec->GetAttack();
 	double				bonuses	= 0.0;//cumulative % bonuses
+
+	// Stat modifier overlay: flat additive before percentage bonuses
+	base += m_attackMod;
 
 	sint32 intAttack = (sint32)base;
 	sint32 modAttack = g_slicEngine->CallMod(mod_UnitAttack, intAttack, m_id, defender.m_id, intAttack);
@@ -3469,6 +3482,9 @@ double UnitData::GetDefense(const Unit &attacker) const
 	double base			= myRec->GetDefense();
 	double bonuses		= 0.0;// cumulative bonuses
 	Cell *		   cell = g_theWorld->GetCell(m_pos);
+
+	// Stat modifier overlay: flat additive before percentage bonuses
+	base += m_defenseMod;
 
 	sint32 intDef = (sint32)base;
 	sint32 modDef = g_slicEngine->CallMod(mod_UnitDefense, intDef, m_id, attacker.m_id, intDef);
@@ -6255,7 +6271,7 @@ sint32 UnitData::CalculateTotalHP() const
 	sint32 wonderHPBonus  = wonderutil_GetIncreaseHP(g_player[m_owner]->m_builtWonders);
 	sint32 featHPBonus    = g_featTracker->GetAdditiveEffect(FEAT_EFFECT_INCREASE_HIT_POINTS, m_owner);
 
-	return GetDBRec()->GetMaxHP() + wonderHPBonus + civHPBonus + featHPBonus;
+	return GetDBRec()->GetMaxHP() + wonderHPBonus + civHPBonus + featHPBonus + m_hpMaxMod;
 }
 
 sint32 UnitData::CalculateTotalFuel() const
@@ -6290,6 +6306,9 @@ double UnitData::CalculateTotalMovePoints() const
 			movePoints += amt;
 		}
 	}
+
+	// Stat modifier overlay: flat additive to move points
+	movePoints += static_cast<double>(m_moveMod);
 
 	return movePoints;
 }

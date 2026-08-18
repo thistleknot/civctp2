@@ -890,6 +890,16 @@ void SelectedItem::NewRegisterClick(const MapPoint &pos, const aui_MouseEvent *d
 	else if(leftDrop)
 		button = SELECT_BUTTON_LEFT_DROP;
 
+	// Right-click cancels script targeting before map hit-testing. This mirrors
+	// ESC cancellation and prevents an ordinary cancel gesture from opening a
+	// context action or evaluating a target tile.
+	if(right && g_controlPanel != NULL &&
+	   g_controlPanel->GetTargetingMode() == CP_TARGETING_MODE_SCRIPT_PENDING)
+	{
+		g_controlPanel->ClearTargetingMode();
+		return;
+	}
+
 	SELECT_TYPE clickedThing = GetClickedThing(pos, button != SELECT_BUTTON_LEFT_DROP);
 
 	if(mode == SELECT_MODE_CTP2)
