@@ -52,6 +52,7 @@
 #include "civscenarios.h"
 
 #include "spnewgamewindow.h"
+#include "spnewgametribescreen.h"
 #include "scenariowindow.h"
 
 #include "profileDB.h"
@@ -66,6 +67,8 @@ extern CivScenarios                 *g_civScenarios;
 extern C3UI                         *g_c3ui;
 extern sint32                       g_startInfoType;
 extern CivApp                       *g_civApp;
+class c3_PopupWindow;
+extern c3_PopupWindow               *g_spNewGameTribeScreen;
 
 ScenarioWindow                      *s_ScenarioWindow = NULL;
 
@@ -648,6 +651,15 @@ void ScenarioWindow::SetProfileFromScenario( void )
 
 			g_civApp->CleanupAppDB();
 			g_civApp->InitializeAppDB((*(CivArchive *)(NULL)));
+
+			// The Empire list was built against the previous civilisation
+			// database; a scenario with fewer civs leaves rows whose index
+			// is past the end, and selecting one dereferences NULL.
+			if (g_spNewGameTribeScreen)
+			{
+				spnewgametribescreen_clearTribes();
+				spnewgametribescreen_addAllTribes();
+			}
 
 
 
