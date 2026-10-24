@@ -992,6 +992,9 @@ void SlicEngine::AddBuiltinFunctions()
 	m_functionHash->Add(new Slic_UnitMovementLeft);
 	m_functionHash->Add(new Slic_GetStoredProduction);
 
+	// Script-driven targeting
+	 m_functionHash->Add(new Slic_BeginTargetMode);
+	 m_functionHash->Add(new Slic_IsTargetModeActive);
 }
 
 void SlicEngine::Link()
@@ -2094,8 +2097,11 @@ void SlicEngine::RunUITriggers(const MBCHAR *controlName)
 	if(trig) {
 		SlicSegment *seg = trig->GetSegment();
 		if(seg && seg->IsEnabled()) {
-			m_uiExecuteObjects->AddTail(new SlicObject(seg));
-
+			SlicObject * obj = new SlicObject(seg);
+			// Same recipient as RunHelpTriggers gives its object.
+			if (g_selected_item)
+				obj->AddRecipient(g_selected_item->GetVisiblePlayer());
+			m_uiExecuteObjects->AddTail(obj);
 		}
 	}
 }
