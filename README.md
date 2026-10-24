@@ -83,18 +83,30 @@ This will also copy the videos to that directory.
 
 ## Building on Windows
 
-CTP2 was originally built on Windows with Visual Studio 6. Today, the code compiles on Visual Studio 2017 and 2019 and probably also later. The code has not been compiled on Windows with any other compiler than the Visual Studio compiler. Beside a version of Visual Studio you need:
+The current `ctp2_code/ctp/civctp.vcxproj` requests the MSVC **v141** toolset and Windows SDK **10.0.19041.0**.
 
-1. The Windows SDK installed on your computer
-2. Install Nasm if you want to build SDL builds. A zip-file with the 64 bit windows version and its license is included in the [./NASM](./NASM) subdirectory. You can get the latest version from http://www.nasm.us/pub/nasm/releasebuilds/<!-- Comment so that the full stop does not fuse to the URL -->. The two executables inside go into C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC if you use the 32 bit version of Visual Studio 2017. Adjust the path accordingly if you use a later version or the 64 bit version. The other files in the NASM directory go to C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\VCTargets\BuildCustomizations\. Again adjust the path according to your version if needed.
-2. An environment variable named CDKDIR on your computer. In Windows XP/2000, go to Control
-Panel->System->Environment Variables, and add it, with it's value set to [your source path]/ctp2/bin, the directory with bison, flex, and other tools in it. On Windows 10 it is Control
-Panel->System->Advanced System Settings->Environment Variables or PC Settings->Info->Advanced System Settings->Environment Variables or press Windows+Pause ->Advanced System Settings->Environment Variables
-3. A tmp directory in the root directory of the hard drive or SSD where the code is. If your source code working copy is on drive C: then create C:\tmp. If you have the code on another drive such as E: than it is E:\tmp.
+### Prerequisites
 
-Once all these are in place, open the Visual Studio project file [your source path]/ctp2_code/ctp/civctp.sln in Visual Studio. The project comes with several configurations for several platforms.
+Install Visual Studio 2022 or Visual Studio Build Tools 2022 (or a later release) with:
 
-The platforms are Win32, x64, ARM, and ARM64. Currently the code compiles on all platforms, but it does not link on ARM and AM64 as the library files for SDL2 and FFmpeg. A possibility would be to integrate the source of `SDL2` and compile the libraries with the project. `FFmpeg` requires Nasm that produces assembler files for various x86 based platforms, unfortunately not for ARM. `FFmpeg` is for video support and can be disabled if the preprocessor macro and the "..\msvc\lib\*" libraries are removed from the project settings. If build on ARM/ARM64 you need ARM/ARM64 version of `flex` and `byacc`.
+1. The **Desktop development with C++** workload (includes MSBuild and C++ build tools).
+2. **MSVC v141 - VS 2017 C++ x64/x86 build tools**. Select this under **Individual components**; component ID: `Microsoft.VisualStudio.Component.VC.v141.x86.x64`.
+3. **Windows 10 SDK (10.0.19041.0)**; component ID: `Microsoft.VisualStudio.Component.Windows10SDK.19041`.
+4. NASM and its MSBuild integration from [`NASM/`](./NASM), required by the SDL build configuration. Extract the included NASM zip; place `nasm.exe` and `ndisasm.exe` in the Visual Studio `VC` directory, and `nasm.props`, `nasm.targets`, and `nasm.xml` in `VC\VCTargets\BuildCustomizations`.
+
+The project invokes `flex` and `byacc`; set the `CDKDIR` environment variable to this checkout's `bin` directory. Create a `tmp` directory at the root of the drive containing the checkout, as required by the upstream Windows build setup.
+
+Microsoft lists the Visual Studio components in its [Build Tools component catalog](https://learn.microsoft.com/en-us/visualstudio/install/workload-component-id-vs-build-tools?view=vs-2022).
+
+From a Visual Studio Developer Command Prompt at the repository root, build the 32-bit SDL debug executable with:
+
+```bat
+msbuild ctp2_code\ctp\civctp.vcxproj /m /p:Configuration=Debug-SDL /p:Platform=Win32
+```
+
+This writes `ctp2_code\ctp\ctp2-dbg.exe`. The solution is `ctp2_code\ctp\civctp.sln`.
+
+The project also lists Win32, x64, ARM, and ARM64 platforms. ARM and ARM64 currently do not link because the SDL2 and FFmpeg libraries are unavailable for those targets.
 
 The configurations are:
 
@@ -123,12 +135,16 @@ CTP2 can directly be run from Visual Studio, to do so press F5 if you want to ru
 
 ## Building on Linux
 
-You will probably need GCC 5.x or later to build. The code doesn't seem to build on GCC 4.8.
+The repeatable Linux build uses the dependencies in the upstream [`Dockerfile`](./Dockerfile), based on Ubuntu rolling. For a native Debian/Ubuntu build, install the same packages:
 
-You will need SDL 2.0, SDL_Mixer 2.0, SDL_Image 2.0. To be able to play movies you also need ffmpeg libraries (some).
-You will also need `byacc` and `flex`.
-On Debian and friends, use `sudo apt install libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev libtiff-dev libavcodec-dev libavformat-dev libswscale-dev byacc flex` to install them all.
+```sh
+sudo apt-get update
+sudo apt-get install -y \
+  libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev libtiff-dev \
+  byacc gcc g++ binutils-gold automake make libtool unzip flex git ca-certificates
+```
 
+For movie playback, the optional FFmpeg development libraries and the `--enable-ffmpeg4movies` configure flag are also required; the default build omits movie playback.
 The build itself is pretty classing and straight forward:
 
 ```
@@ -156,6 +172,16 @@ Also, note that `make -j$(nproc)` may fail the first time. Some files are auto-g
 Finally, you may have to use gold instead of ld for link (add `-fuse-ld=gold` to your CFLAGS & CXXFLAGS if needed).
 
 If you get the message on the terminal: `Failed to load module "atk-bridge"`. Install at-spi with `sudo apt install at-spi`.
+
+### Repeatable Linux build with Docker
+
+Docker builds the dependencies in a clean Linux environment. Install Docker Engine on Linux, or Docker Desktop with its Linux engine and WSL 2 backend on Windows. From a Linux/WSL shell at the repository root, build the committed source tree with:
+
+```sh
+git archive HEAD | docker build --target builder --build-arg BTYP=debug -t civctp2:builder -
+```
+
+The builder stage runs `autogen.sh`, `configure`, compilation, and installation. This builds committed `HEAD`; commit the source changes you intend to validate first. `git archive` excludes ignored local build output from the Docker context.
 
 ### Running
 
