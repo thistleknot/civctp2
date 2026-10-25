@@ -1,3 +1,16 @@
+// Pipeline | Mechanism | Contract
+// INITIALIZE | Resolve scenario Gaia records and reset cached asset IDs | mandatory R1
+// COUNTDOWN | Reject absent Gaia records before threshold reads | mandatory R2
+// BUILD | Reject unavailable tower assets before terrain construction | mandatory R3
+// R1: Every scenario reload resets Gaia asset indexes; omitted optional records are allowed.
+// R2: Missing required Gaia records disable countdown readiness; stock thresholds remain intact.
+// R3: Missing tower assets disable AI tower construction.
+// CLOSED: Adding stock Gaia records to MoM is rejected: their stock assets are not in the mod.
+// Preconditions: Parsed scenario databases precede initialization and queries.
+// Failure modes: Invalid optional indexes return unavailable instead of dereferencing NULL.
+// Specification: doc/dev/gaia-controller-optional-endgame.spec.md
+//
+
 //----------------------------------------------------------------------------
 //
 // Project      : Call To Power 2
@@ -829,6 +842,22 @@ const Bit_Table & GaiaController::GetCoverage() const
 
 bool GaiaController::CanStartCountdown() const
 {
+	// Scenarios may omit Gaia endgame objects. Do not call threshold helpers
+	// until all three named records resolve in the current scenario database.
+	if (g_theEndGameObjectDB == NULL)
+		return false;
+
+	const sint32 endgameObjectCount = g_theEndGameObjectDB->NumRecords();
+	if (sm_towerEndgameIndex < 0 || sm_towerEndgameIndex >= endgameObjectCount ||
+		sm_mainframeEndgameIndex < 0 || sm_mainframeEndgameIndex >= endgameObjectCount ||
+		sm_satelliteEndgameIndex < 0 || sm_satelliteEndgameIndex >= endgameObjectCount)
+		return false;
+
+	if (g_theEndGameObjectDB->Get(sm_towerEndgameIndex) == NULL ||
+		g_theEndGameObjectDB->Get(sm_mainframeEndgameIndex) == NULL ||
+		g_theEndGameObjectDB->Get(sm_satelliteEndgameIndex) == NULL)
+		return false;
+
 	if (GetTowerCoverage() < TowerCoverageRequired())
 		return false;
 
