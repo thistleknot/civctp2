@@ -108,6 +108,44 @@ This writes `ctp2_code\ctp\ctp2-dbg.exe`. The solution is `ctp2_code\ctp\civctp.
 
 The project also lists Win32, x64, ARM, and ARM64 platforms. ARM and ARM64 currently do not link because the SDL2 and FFmpeg libraries are unavailable for those targets.
 
+### Clean-source Windows build order
+
+Build the database compiler before the game project; it generates the `.cdb`
+parser outputs used by the game. The game also links the Win32 FreeType, zlib,
+TIFF, and ANET projects. The checked build used the v145 toolset and Windows
+SDK 10.0.26100.0 (the project defaults above remain v141 and 10.0.19041.0).
+Pass the installed lexer directory explicitly as `CDKDIR`:
+
+```powershell
+$msbuild = 'MSBuild.exe' # Use the MSBuild from Visual Studio Build Tools.
+$sdk = '/p:WindowsTargetPlatformVersion=10.0.26100.0'
+$toolset = '/p:PlatformToolset=v145'
+$common = @('/m', '/nologo', '/v:minimal', '/p:Platform=Win32', $sdk, $toolset)
+$env:CL = '/MP8'
+
+& $msbuild ctp2_code/gs/dbgen/dbgen.vcxproj @common /p:Configuration=Final `
+  /p:CDKDIR="$PWD/bin"
+
+& $msbuild ctp2_code/libs/freetype-1.3.1/lib/arch/win32/freetype.vcxproj @common /p:Configuration=Release
+& $msbuild ctp2_code/libs/zlib-1.3.1/contrib/vstudio/vc/zlibvc.vcxproj @common /p:Configuration=Release
+& $msbuild ctp2_code/libs/tiff-4.7.0/tiff.vcxproj @common /p:Configuration=Release
+
+# ANET's Windows build uses the COMM_INST calling convention.
+$env:CL = '/MP8 /DCOMM_INST'
+& $msbuild ctp2_code/libs/anet/anet.vcxproj @common /p:Configuration=Release
+
+$env:CL = '/MP8'
+& $msbuild ctp2_code/ctp/civctp.vcxproj @common /p:Configuration=Final-SDL `
+  /p:BuildProjectReferences=false /p:CDKDIR="$PWD/bin"
+```
+
+The Win32 Final-SDL link also expects the seven FFmpeg 6.1.2 import libraries
+(`libavcodec`, `libavdevice`, `libavfilter`, `libavformat`, `libavutil`,
+`libswresample`, and `libswscale`) under `ctp2_code/msvc/lib/x86`. They are not
+installed by the Visual Studio C++ workload; supply the project-compatible
+FFmpeg library bundle before linking. The SDL runtime DLLs must also be beside
+the executable when running it.
+
 The configurations are:
 
 * Debug: (DirectX build) Unoptimized debug build, with logging, asserts, and a memory leak detector.
