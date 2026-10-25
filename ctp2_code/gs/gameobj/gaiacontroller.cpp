@@ -1,3 +1,15 @@
+// Pipeline | Mechanism | Contract
+// INITIALIZE | Resolve scenario Gaia records and reset cached asset IDs | mandatory R1
+// COUNTDOWN | Reject absent Gaia records before threshold reads | mandatory R2
+// BUILD | Reject unavailable tower assets before terrain construction | mandatory R3
+// R1: Every scenario reload resets Gaia asset indexes; omitted optional records are allowed.
+// R2: Missing required Gaia records disable countdown readiness; stock thresholds remain intact.
+// R3: Missing tower assets disable AI tower construction.
+// CLOSED: Adding stock Gaia records to MoM is rejected: their stock assets are not in the mod.
+// Preconditions: Parsed scenario databases precede initialization and queries.
+// Failure modes: Invalid optional indexes return unavailable instead of dereferencing NULL.
+// Specification: doc/dev/gaia-controller-optional-endgame.spec.md
+//
 //----------------------------------------------------------------------------
 //
 // Project      : Call To Power 2
@@ -58,12 +70,12 @@
 uint64 GaiaController::sm_endgameImprovements = 0x0;
 uint64 GaiaController::sm_endgameBuildings = 0x0;
 uint64 GaiaController::sm_endgameWonders = 0x0;
-sint32 GaiaController::sm_towerEndgameIndex = 0x0;
-sint32 GaiaController::sm_satelliteEndgameIndex = 0x0;
-sint32 GaiaController::sm_mainframeEndgameIndex = 0x0;
-sint32 GaiaController::sm_towerTileImpIndex = 0x0;
-sint32 GaiaController::sm_satelliteBuildingIndex = 0x0;
-sint32 GaiaController::sm_mainframeBuildingIndex = 0x0;
+sint32 GaiaController::sm_towerEndgameIndex = -1;
+sint32 GaiaController::sm_satelliteEndgameIndex = -1;
+sint32 GaiaController::sm_mainframeEndgameIndex = -1;
+sint32 GaiaController::sm_towerTileImpIndex = -1;
+sint32 GaiaController::sm_satelliteBuildingIndex = -1;
+sint32 GaiaController::sm_mainframeBuildingIndex = -1;
 
 GaiaController::GaiaController(const PLAYER_INDEX player)
 {
@@ -98,8 +110,15 @@ void GaiaController::Serialize(CivArchive &archive)
 	m_coveredCells.Serialize(archive);
 }
 
+// Require: scenario databases have been parsed.
+// Guarantee: missing Gaia assets stay at -1, including after a database reload.
 void GaiaController::InitializeStatics()
 {
+	// A scenario reload must not retain asset IDs from the previous database.
+	sm_towerTileImpIndex = -1;
+	sm_satelliteBuildingIndex = -1;
+	sm_mainframeBuildingIndex = -1;
+
 	const TerrainImprovementRecord *terr_rec;
 	const BuildingRecord *building_rec;
 	const WonderRecord *wonder_rec;
@@ -107,34 +126,37 @@ void GaiaController::InitializeStatics()
 	sm_towerEndgameIndex =
 		g_theEndGameObjectDB->FindRecordNameIndex("ENDGAME_PROCESSING_TOWER");
 
-	Assert(sm_towerEndgameIndex >= 0);
-	if (sm_towerEndgameIndex >= 0 && g_theEndGameObjectDB->Get(sm_towerEndgameIndex))
+	if (sm_towerEndgameIndex >= 0 && g_theEndGameObjectDB->Get(sm_towerEndgameIndex) &&
+		g_theEndGameObjectDB->Get(sm_towerEndgameIndex)->HasTerrainImprovement())
 	{
 		terr_rec = g_theEndGameObjectDB->Get(sm_towerEndgameIndex)->
 			GetTerrainImprovementPtr();
-		sm_towerTileImpIndex = terr_rec->GetIndex();
+		if (terr_rec)
+			sm_towerTileImpIndex = terr_rec->GetIndex();
 	}
 
 	sm_satelliteEndgameIndex =
 		g_theEndGameObjectDB->FindRecordNameIndex("ENDGAME_POWER_SATELLITE");
 
-	Assert(sm_satelliteEndgameIndex >= 0);
-	if (sm_satelliteEndgameIndex >= 0 && g_theEndGameObjectDB->Get(sm_satelliteEndgameIndex))
+	if (sm_satelliteEndgameIndex >= 0 && g_theEndGameObjectDB->Get(sm_satelliteEndgameIndex) &&
+		g_theEndGameObjectDB->Get(sm_satelliteEndgameIndex)->HasBuilding())
 	{
 		building_rec = g_theEndGameObjectDB->Get(sm_satelliteEndgameIndex)->
 			GetBuildingPtr();
-		sm_satelliteBuildingIndex = building_rec->GetIndex();
+		if (building_rec)
+			sm_satelliteBuildingIndex = building_rec->GetIndex();
 	}
 
 	sm_mainframeEndgameIndex =
 		g_theEndGameObjectDB->FindRecordNameIndex("ENDGAME_GAIA_COMPUTER");
 
-	Assert(sm_mainframeEndgameIndex >= 0);
-	if (sm_mainframeEndgameIndex >= 0 && g_theEndGameObjectDB->Get(sm_mainframeEndgameIndex))
+	if (sm_mainframeEndgameIndex >= 0 && g_theEndGameObjectDB->Get(sm_mainframeEndgameIndex) &&
+		g_theEndGameObjectDB->Get(sm_mainframeEndgameIndex)->HasBuilding())
 	{
 		building_rec = g_theEndGameObjectDB->Get(sm_mainframeEndgameIndex)->
 			GetBuildingPtr();
-		sm_mainframeBuildingIndex = building_rec->GetIndex();
+		if (building_rec)
+			sm_mainframeBuildingIndex = building_rec->GetIndex();
 	}
 
 	sm_endgameImprovements = 0x0;
@@ -795,8 +817,26 @@ const Bit_Table & GaiaController::GetCoverage() const
 	return m_coveredCells;
 }
 
+// Require: InitializeStatics has resolved the current scenario record indexes.
+// Guarantee: omitted Gaia requirements return false before any threshold read.
 bool GaiaController::CanStartCountdown() const
 {
+	// Scenarios may omit Gaia endgame objects. Treat that as Gaia disabled;
+	// the threshold helpers below dereference these records unconditionally.
+	if (g_theEndGameObjectDB == NULL)
+		return false;
+
+	const sint32 endgameObjectCount = g_theEndGameObjectDB->NumRecords();
+	if (sm_towerEndgameIndex < 0 || sm_towerEndgameIndex >= endgameObjectCount ||
+		sm_mainframeEndgameIndex < 0 || sm_mainframeEndgameIndex >= endgameObjectCount ||
+		sm_satelliteEndgameIndex < 0 || sm_satelliteEndgameIndex >= endgameObjectCount)
+		return false;
+
+	if (g_theEndGameObjectDB->Get(sm_towerEndgameIndex) == NULL ||
+		g_theEndGameObjectDB->Get(sm_mainframeEndgameIndex) == NULL ||
+		g_theEndGameObjectDB->Get(sm_satelliteEndgameIndex) == NULL)
+		return false;
+
 	if (GetTowerCoverage() < TowerCoverageRequired())
 		return false;
 
@@ -895,12 +935,18 @@ bool GaiaController::GaiaControllerTileImp(const sint32 type) const
 	return type == sm_towerTileImpIndex;
 }
 
+// Require: scenario databases have been parsed.
+// Guarantee: no terrain lookup occurs for an unavailable Gaia tower asset.
 bool GaiaController::CanBuildTowers(const bool & check_pw) const
 {
+	if (sm_towerTileImpIndex < 0 ||
+		sm_towerTileImpIndex >= g_theTerrainImprovementDB->NumRecords())
+		return false;
+
 	const TerrainImprovementRecord *rec =
 		g_theTerrainImprovementDB->Get(sm_towerTileImpIndex);
 
-	return terrainutil_CanPlayerBuild(rec, m_playerId, check_pw);
+	return rec && terrainutil_CanPlayerBuild(rec, m_playerId, check_pw);
 }
 
 sint32 GaiaController::ScoreTowerPosition(MapPoint & pos, const MapPoint empire_center, MapPoint_List & towers, sint32 radius) const
