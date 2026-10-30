@@ -313,6 +313,7 @@ void UnitData::Create(const sint32 t,
 							  i.m_id, t, o));
 
 	m_flags = 0;
+	m_userFlags = 0;
 	m_actor = 0;
 	m_type = t;
 
@@ -322,15 +323,15 @@ void UnitData::Create(const sint32 t,
 
 	m_owner = o;
 
-	m_hp              = CalculateTotalHP();
-	m_fuel            = CalculateTotalFuel();
-	m_movement_points = CalculateTotalMovePoints();
-
-	// MoM spell buff overlays — start at zero
+	// MoM spell buff overlays — initialize before derived stats read them
 	m_attackMod  = 0;
 	m_defenseMod = 0;
 	m_hpMaxMod   = 0;
 	m_moveMod    = 0;
+
+	m_hp              = CalculateTotalHP();
+	m_fuel            = CalculateTotalFuel();
+	m_movement_points = CalculateTotalMovePoints();
 
 	// PFT 17 Mar 05, don't FIRST_MOVE flag immobile units
 	if( !IsImmobile() )
@@ -371,6 +372,8 @@ UnitData::UnitData(CivArchive &archive) : GameObj(0)
 #ifdef _DEBUG
 	m_text[0] = 0;
 #endif
+
+	m_userFlags = 0;
 
 	m_cargo_list = NULL;
 	m_city_data = NULL;
@@ -586,6 +589,9 @@ sint32 UnitData::ResetMovement()
 	{
 		m_movement_points += amt;
 	}
+
+	// MoM spell buff overlay: the move modifier must survive the per-turn reset
+	m_movement_points += static_cast<double>(m_moveMod);
 
 	if(Flag(k_UDF_IS_ENTRENCHING)) {
 		if(Flag(k_UDF_FIRST_MOVE)) {
@@ -3295,8 +3301,11 @@ double UnitData::GetOffense(const Unit &defender) const
 	double		bonuses	= 0.0;//cumulative % bonuses
 	Cell *		cell	= g_theWorld->GetCell(m_pos);
 
+	// MoM spell buff overlay: GetAttack is unused, combat reads this function
+	base += m_attackMod;
+
 	sint32 intAttack = (sint32)base;
-	sint32 modAttack = g_slicEngine->CallMod(mod_UnitAttack, intAttack, m_id, defender.m_id, intAttack);
+	sint32 modAttack = g_slicEngine->CallMod(mod_UnitAttack,intAttack, m_id, defender.m_id, intAttack);
 	if(modAttack != intAttack) base = modAttack;
 
 	// Added for Leaders to increase attack
@@ -3872,6 +3881,9 @@ double UnitData::GetDefCounterAttack(const Unit &attacker) const
 	double base			= myRec->GetDefense();
 	double bonuses		= 0.0;// cumulative bonuses
 	Cell *		   cell = g_theWorld->GetCell(m_pos);
+
+	// MoM spell buff overlay, same as GetDefense
+	base += m_defenseMod;
 
 	sint32 intDef = (sint32)base;
 	sint32 modDef = g_slicEngine->CallMod(mod_UnitDefense, intDef, m_id, attacker.m_id, intDef);

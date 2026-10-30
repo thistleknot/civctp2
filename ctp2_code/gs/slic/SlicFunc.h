@@ -538,7 +538,9 @@ SLICFUNC(SFR_VOID, SetString)
 SLICFUNC(SFR_VOID, SetStringByDBIndex)
 SLICFUNC(SFR_VOID, GetStringDBIndex)
 
-SLICFUNC(SFR_VOID, UnitHasUserFlag)
+SLICFUNC(SFR_INT, UnitHasUserFlag)
+SLICFUNC(SFR_VOID, SetUnitUserFlag)
+SLICFUNC(SFR_VOID, ClearUnitUserFlag)
 
 SLICFUNC(SFR_VOID, BlankScreen)
 SLICFUNC(SFR_VOID, AddCenter)
@@ -652,6 +654,9 @@ SLICFUNC(SFR_INT, ClearUnitBuffs)
 SLICFUNC(SFR_INT, HealUnit)
 SLICFUNC(SFR_INT, GetUnitHP)
 SLICFUNC(SFR_INT, GetUnitMaxHP)
+SLICFUNC(SFR_INT, GetUnitOffense)
+SLICFUNC(SFR_INT, GetUnitDefense)
+SLICFUNC(SFR_INT, IsUnitElite)
 
 // Script-driven targeting
 SLICFUNC(SFR_VOID, BeginTargetMode)

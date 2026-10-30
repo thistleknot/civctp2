@@ -787,6 +787,8 @@ void SlicEngine::AddBuiltinFunctions()
 	m_functionHash->Add(new Slic_SetStringByDBIndex);
 	m_functionHash->Add(new Slic_GetStringDBIndex);
 	m_functionHash->Add(new Slic_UnitHasUserFlag);
+	m_functionHash->Add(new Slic_SetUnitUserFlag);
+	m_functionHash->Add(new Slic_ClearUnitUserFlag);
 
 	m_functionHash->Add(new Slic_BlankScreen);
 	m_functionHash->Add(new Slic_AddCenter);
@@ -998,6 +1000,9 @@ void SlicEngine::AddBuiltinFunctions()
 	m_functionHash->Add(new Slic_HealUnit);
 	m_functionHash->Add(new Slic_GetUnitHP);
 	m_functionHash->Add(new Slic_GetUnitMaxHP);
+	m_functionHash->Add(new Slic_GetUnitOffense);
+	m_functionHash->Add(new Slic_GetUnitDefense);
+	m_functionHash->Add(new Slic_IsUnitElite);
 
 	// Script-driven targeting
 	m_functionHash->Add(new Slic_BeginTargetMode);

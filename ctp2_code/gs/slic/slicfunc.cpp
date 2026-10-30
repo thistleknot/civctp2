@@ -5809,7 +5809,53 @@ SFN_ERROR Slic_UnitHasUserFlag::Call(SlicArgList *args)
 	if(flag < 1 || flag > 32)
 		return SFN_ERROR_OUT_OF_RANGE;
 
-	m_result.m_int = 0;
+	m_result.m_int = u.IsValid() && u.UserFlag(flag) ? 1 : 0;
+
+	return SFN_ERROR_OK;
+}
+
+SFN_ERROR Slic_SetUnitUserFlag::Call(SlicArgList *args)
+{
+	if(args->Count() != 2)
+		return SFN_ERROR_NUM_ARGS;
+
+	Unit u;
+
+	if(!args->GetUnit(0, u))
+		return SFN_ERROR_TYPE_ARGS;
+
+	sint32 flag;
+	if(!args->GetInt(1, flag))
+		return SFN_ERROR_TYPE_ARGS;
+
+	if(flag < 1 || flag > 32)
+		return SFN_ERROR_OUT_OF_RANGE;
+
+	if(u.IsValid())
+		u.SetUserFlag(flag);
+
+	return SFN_ERROR_OK;
+}
+
+SFN_ERROR Slic_ClearUnitUserFlag::Call(SlicArgList *args)
+{
+	if(args->Count() != 2)
+		return SFN_ERROR_NUM_ARGS;
+
+	Unit u;
+
+	if(!args->GetUnit(0, u))
+		return SFN_ERROR_TYPE_ARGS;
+
+	sint32 flag;
+	if(!args->GetInt(1, flag))
+		return SFN_ERROR_TYPE_ARGS;
+
+	if(flag < 1 || flag > 32)
+		return SFN_ERROR_OUT_OF_RANGE;
+
+	if(u.IsValid())
+		u.ClearUserFlag(flag);
 
 	return SFN_ERROR_OK;
 }
@@ -7987,6 +8033,61 @@ SFN_ERROR Slic_GetUnitMaxHP::Call(SlicArgList *args)
 	}
 
 	m_result.m_int = unit.AccessData()->CalculateTotalHP();
+	return SFN_ERROR_OK;
+}
+
+// GetUnitOffense(unit)
+// Combat attack value: includes elite, MoM buff overlays and enchantment hooks.
+// The unit is passed as its own defender, so class-vs-target bonuses are inert.
+SFN_ERROR Slic_GetUnitOffense::Call(SlicArgList *args)
+{
+	if(args->Count() != 1)
+		return SFN_ERROR_NUM_ARGS;
+
+	Unit unit;
+	if(!args->GetUnit(0, unit))
+		return SFN_ERROR_TYPE_ARGS;
+
+	if(!unit.IsValid()) {
+		m_result.m_int = 0;
+		return SFN_ERROR_OK;
+	}
+
+	m_result.m_int = static_cast<sint32>(unit.AccessData()->GetOffense(unit));
+	return SFN_ERROR_OK;
+}
+
+// GetUnitDefense(unit)
+// Combat defense value: includes elite, MoM buff overlays and enchantment hooks.
+SFN_ERROR Slic_GetUnitDefense::Call(SlicArgList *args)
+{
+	if(args->Count() != 1)
+		return SFN_ERROR_NUM_ARGS;
+
+	Unit unit;
+	if(!args->GetUnit(0, unit))
+		return SFN_ERROR_TYPE_ARGS;
+
+	if(!unit.IsValid()) {
+		m_result.m_int = 0;
+		return SFN_ERROR_OK;
+	}
+
+	m_result.m_int = static_cast<sint32>(unit.GetDefense(unit));
+	return SFN_ERROR_OK;
+}
+
+// IsUnitElite(unit): 1 when the unit is elite, else 0.
+SFN_ERROR Slic_IsUnitElite::Call(SlicArgList *args)
+{
+	if(args->Count() != 1)
+		return SFN_ERROR_NUM_ARGS;
+
+	Unit unit;
+	if(!args->GetUnit(0, unit))
+		return SFN_ERROR_TYPE_ARGS;
+
+	m_result.m_int = (unit.IsValid() && unit.IsElite()) ? 1 : 0;
 	return SFN_ERROR_OK;
 }
 
