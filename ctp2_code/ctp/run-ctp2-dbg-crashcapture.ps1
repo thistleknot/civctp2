@@ -3,7 +3,7 @@ param(
     [switch]$NoRun,
     [switch]$ForceRun,
     [switch]$PreferRelease,
-    [string]$SourceRoot = 'H:\Games\civctp2\ctp2_code\ctp',
+    [string]$SourceRoot = 'H:\Games\civctp2-gaia-integration\ctp2_code\ctp',
 
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$GameArgs
@@ -73,11 +73,15 @@ function Test-DependencyPresence {
         [string]$Root,
 
         [Parameter(Mandatory = $true)]
-        [string]$Name
+        [string]$Name,
+
+        [Parameter(Mandatory = $true)]
+        [string]$SourceRoot
     )
 
     $searchPaths = @(
         (Join-Path $Root $Name),
+        (Join-Path $SourceRoot $Name),
         (Join-Path $env:WINDIR ("System32\" + $Name)),
         (Join-Path $env:WINDIR ("SysWOW64\" + $Name))
     )
@@ -91,23 +95,112 @@ function Test-DependencyPresence {
     return $false
 }
 
+function Get-PeImportNames {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $stream = [System.IO.File]::Open($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+    try {
+        $reader = New-Object System.IO.BinaryReader($stream)
+        $stream.Seek(0x3c, [System.IO.SeekOrigin]::Begin) | Out-Null
+        $peOffset = $reader.ReadInt32()
+        $stream.Seek($peOffset, [System.IO.SeekOrigin]::Begin) | Out-Null
+        if ($reader.ReadUInt32() -ne 0x00004550) {
+            throw "Invalid PE signature: $Path"
+        }
+
+        $stream.Seek($peOffset + 6, [System.IO.SeekOrigin]::Begin) | Out-Null
+        $sectionCount = $reader.ReadUInt16()
+        $stream.Seek($peOffset + 20, [System.IO.SeekOrigin]::Begin) | Out-Null
+        $optionalHeaderSize = $reader.ReadUInt16()
+        $optionalHeaderOffset = $peOffset + 24
+        $stream.Seek($optionalHeaderOffset, [System.IO.SeekOrigin]::Begin) | Out-Null
+        $optionalMagic = $reader.ReadUInt16()
+        $directoryOffset = switch ($optionalMagic) {
+            0x010b { 96 }
+            0x020b { 112 }
+            default { throw "Unsupported PE optional-header format 0x$('{0:x}' -f $optionalMagic): $Path" }
+        }
+
+        $stream.Seek($optionalHeaderOffset + $directoryOffset + 8, [System.IO.SeekOrigin]::Begin) | Out-Null
+        $importRva = $reader.ReadUInt32()
+        if ($importRva -eq 0) {
+            return @()
+        }
+
+        $sections = New-Object System.Collections.Generic.List[object]
+        $sectionTableOffset = $optionalHeaderOffset + $optionalHeaderSize
+        for ($index = 0; $index -lt $sectionCount; $index++) {
+            $sectionOffset = $sectionTableOffset + ($index * 40)
+            $stream.Seek($sectionOffset + 8, [System.IO.SeekOrigin]::Begin) | Out-Null
+            $virtualSize = $reader.ReadUInt32()
+            $virtualAddress = $reader.ReadUInt32()
+            $rawSize = $reader.ReadUInt32()
+            $rawPointer = $reader.ReadUInt32()
+            $sections.Add([pscustomobject]@{
+                    VirtualSize    = $virtualSize
+                    VirtualAddress = $virtualAddress
+                    RawSize        = $rawSize
+                    RawPointer     = $rawPointer
+                })
+        }
+
+        $resolveRva = {
+            param([uint32]$Rva)
+            foreach ($section in $sections) {
+                $sectionSpan = [Math]::Max([double]$section.VirtualSize, [double]$section.RawSize)
+                if ($Rva -ge $section.VirtualAddress -and $Rva -lt ($section.VirtualAddress + $sectionSpan)) {
+                    return [long]$section.RawPointer + ($Rva - $section.VirtualAddress)
+                }
+            }
+            throw "PE RVA 0x$('{0:x}' -f $Rva) is outside all sections: $Path"
+        }
+
+        $descriptorOffset = & $resolveRva $importRva
+        $imports = New-Object System.Collections.Generic.List[string]
+        while ($true) {
+            $stream.Seek($descriptorOffset + 12, [System.IO.SeekOrigin]::Begin) | Out-Null
+            $nameRva = $reader.ReadUInt32()
+            if ($nameRva -eq 0) {
+                break
+            }
+
+            $nameOffset = & $resolveRva $nameRva
+            $stream.Seek($nameOffset, [System.IO.SeekOrigin]::Begin) | Out-Null
+            $nameBytes = New-Object System.Collections.Generic.List[byte]
+            while (($byte = $reader.ReadByte()) -ne 0) {
+                $nameBytes.Add($byte)
+            }
+            $imports.Add([System.Text.Encoding]::ASCII.GetString($nameBytes.ToArray()))
+            $descriptorOffset += 20
+        }
+
+        return $imports.ToArray()
+    } finally {
+        $stream.Dispose()
+    }
+}
+
 function Get-MissingLaunchDependencies {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Root,
 
         [Parameter(Mandatory = $true)]
-        [string]$LaunchRelativePath
+        [string]$SourceRoot,
+
+        [Parameter(Mandatory = $true)]
+        [string]$LaunchSourcePath
     )
 
-    $required = switch ($LaunchRelativePath.ToLowerInvariant()) {
-        'ctp2-dbg.exe' { @('MSVCP140D.dll', 'VCRUNTIME140D.dll', 'ucrtbased.dll', 'MSVCRTD.dll') }
-        default { @() }
-    }
-
     $missing = New-Object System.Collections.Generic.List[string]
-    foreach ($name in $required) {
-        if (-not (Test-DependencyPresence -Root $Root -Name $name)) {
+    foreach ($name in (Get-PeImportNames -Path $LaunchSourcePath)) {
+        if ($name -match '^(api-ms-win-|ext-ms-win-)') {
+            continue
+        }
+        if (-not (Test-DependencyPresence -Root $Root -Name $name -SourceRoot $SourceRoot)) {
             $missing.Add($name)
         }
     }
@@ -211,6 +304,18 @@ function Get-OverlaySources {
         $sources.Add([pscustomobject]@{
                 Source       = $debugPdb
                 RelativePath = 'ctp2-dbg.pdb'
+            })
+    }
+
+    # The in-game crash symbolizer reads the map beside the selected executable.
+    # Keep release, log, and debug binaries paired with their own map so raw stack
+    # addresses never resolve against symbols from a different build.
+    $mapName = [System.IO.Path]::ChangeExtension($LaunchRelativePath, '.map')
+    $symbolMap = Join-Path $SourceRoot $mapName
+    if (Test-Path $symbolMap) {
+        $sources.Add([pscustomobject]@{
+                Source       = $symbolMap
+                RelativePath = $mapName
             })
     }
 
@@ -372,7 +477,7 @@ if (-not $launchSource) {
     throw "No launchable x86 source executable was found under $SourceRoot"
 }
 
-$missingLaunchDependencies = Get-MissingLaunchDependencies -Root $root -LaunchRelativePath $launchSource.RelativePath
+$missingLaunchDependencies = Get-MissingLaunchDependencies -Root $root -SourceRoot $SourceRoot -LaunchSourcePath $launchSource.SourcePath
 if ($missingLaunchDependencies.Count -gt 0 -and $launchSource.RelativePath -ieq 'ctp2-dbg.exe') {
     $releaseSourcePath = Join-Path $SourceRoot 'ctp2.exe'
     if (Test-Path $releaseSourcePath) {
@@ -495,6 +600,14 @@ if (($missingRequiredUi.Count -gt 0 -or $forbiddenScenarioUi.Count -gt 0) -and -
     Write-Warning "Blocked launch: required progress-window UI sheet checklist failed."
     Write-Warning "Repair with: python patch_ctp2_images.py --base-only"
     return
+}
+
+# Stage the selected executable and its matching symbols even when the initial
+# architecture preflight passes; otherwise the install may run a stale binary.
+if (-not $overlayState -and -not $NoRun -and (Test-Path $SourceRoot)) {
+    Write-Host "Staging x86 runtime overlay from: $SourceRoot"
+    $overlayState = Stage-X86RuntimeOverlay -SourceRoot $SourceRoot -InstallRoot $root -LaunchSourcePath $launchSource.SourcePath -LaunchRelativePath $launchSource.RelativePath
+    Write-Host "Overlay mode: active (will restore original installed files after exit)"
 }
 
 try {

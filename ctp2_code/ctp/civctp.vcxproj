@@ -625,6 +625,7 @@
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <ProgramDatabaseFile>$(IntDir)$(TargetName).pdb</ProgramDatabaseFile>
       <ProfileGuidedDatabase>$(IntDir)$(TargetName).pgd</ProfileGuidedDatabase>
+      <StackReserveSize>8388608</StackReserveSize>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
