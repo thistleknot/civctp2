@@ -396,6 +396,18 @@ void CreateInitialHuman
 
 sint32 gameinit_PlaceInitalUnits(sint32 nPlayers, MapPoint player_start_list[k_MAX_PLAYERS])
 {
+	MapPoint diagnosticMapSize;
+	constutil_GetMapSizeMapPoint(g_theProfileDB->GetMapSize(), diagnosticMapSize);
+	DPRINTF(k_DBG_FIX, ("MAPGRID gameinit_PlaceInitalUnits profile MapSize=%d mapPoint=%d,%d world=%d,%d unitTree=%d,%d MapAnalysis=unavailable\n",
+	                    g_theProfileDB->GetMapSize(), diagnosticMapSize.x, diagnosticMapSize.y,
+	                    g_theWorld->GetXWidth(), g_theWorld->GetYHeight(),
+	                    g_theUnitTree ? g_theUnitTree->GetWidth() : -1,
+	                    g_theUnitTree ? g_theUnitTree->GetHeight() : -1));
+	for (sint32 diagnosticPlayer = 0; diagnosticPlayer < nPlayers; ++diagnosticPlayer) {
+		DPRINTF(k_DBG_FIX, ("MAPGRID start player=%d x=%d y=%d\n", diagnosticPlayer,
+		                    player_start_list[diagnosticPlayer].x,
+		                    player_start_list[diagnosticPlayer].y));
+	}
 	sint32 i, j;
 	sint32 settler = -1;
 
@@ -1574,6 +1586,17 @@ sint32 gameinit_Initialize(sint32 mWidth, sint32 mHeight, CivArchive *archive)
 	g_theUnitTree = new QuadTree<Unit>(sint16(g_theWorld->GetXWidth()),
 	                                   sint16(g_theWorld->GetYHeight()),
 	                                   g_theWorld->IsYwrap());
+	MapPoint diagnosticMapSize;
+	constutil_GetMapSizeMapPoint(g_theProfileDB->GetMapSize(), diagnosticMapSize);
+	DPRINTF(k_DBG_FIX, ("MAPGRID gameinit_Initialize profile MapSize=%d mapPoint=%d,%d world=%d,%d unitTree=%d,%d MapAnalysis=unavailable\n",
+	                    g_theProfileDB->GetMapSize(), diagnosticMapSize.x, diagnosticMapSize.y,
+	                    g_theWorld->GetXWidth(), g_theWorld->GetYHeight(),
+	                    g_theUnitTree->GetWidth(), g_theUnitTree->GetHeight()));
+	for (sint32 diagnosticPlayer = 0; diagnosticPlayer < nPlayers; ++diagnosticPlayer) {
+		DPRINTF(k_DBG_FIX, ("MAPGRID start player=%d x=%d y=%d\n", diagnosticPlayer,
+		                    g_player_start_list[diagnosticPlayer].x,
+		                    g_player_start_list[diagnosticPlayer].y));
+	}
 
 	g_theInstallationTree = new InstallationQuadTree(sint16(g_theWorld->GetXWidth()),
 	                                                 sint16(g_theWorld->GetYHeight()),

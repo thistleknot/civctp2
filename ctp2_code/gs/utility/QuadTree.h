@@ -123,6 +123,8 @@ public:
 
 
 	virtual uint32 GetFlags(T obj);
+	sint16 GetWidth() const { return m_width; }
+	sint16 GetHeight() const { return m_height; }
 
 	void IncrementDegenerateCount();
 	void GarbageCollector();
