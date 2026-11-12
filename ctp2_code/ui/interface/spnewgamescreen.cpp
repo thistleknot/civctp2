@@ -93,35 +93,27 @@ void spnewgamescreen_SetupHotseatOrEmail();
 
 sint32 spnewgamescreen_displayMyWindow()
 {
-
 	g_launchIntoCheatMode = FALSE;
 
 	sint32 retval = g_spNewGameWindow ? 0 : spnewgamescreen_Initialize();
+	spnewgametribescreen_Initialize();
 
-	if ( !g_spNewGameTribeScreen ) spnewgametribescreen_Initialize();
-
-	sint32 const    tribeIndex = spnewgametribescreen_getTribeIndex();
-	if ((tribeIndex < 0) || (tribeIndex >= INDEX_TRIBE_INVALID))
-	{
+	sint32 const tribeIndex = spnewgametribescreen_getTribeIndex();
+	if ((tribeIndex < 0) || (tribeIndex >= INDEX_TRIBE_INVALID)) {
 		spnewgamescreen_setPlayerName(g_theProfileDB->GetLeaderName());
-	}
-	else
-	{
+	} else {
 		MBCHAR lname[k_MAX_NAME_LEN + 1];
-		spnewgametribescreen_getLeaderName( lname );
-		spnewgamescreen_setPlayerName( lname );
+		spnewgametribescreen_getLeaderName(lname);
+		spnewgamescreen_setPlayerName(lname);
 	}
 
-	if (g_spNewGameWindow)
-	{
+	if (g_spNewGameWindow) {
 		g_theProfileDB->DefaultSettings();
-		g_spNewGameWindow->m_useCustomMap=false;
+		g_spNewGameWindow->m_useCustomMap = false;
 		g_civPaths->ClearCurScenarioPath();
 
 		if (g_slicEngine)
-		{
 			SlicEngine::Reload(g_slic_filename);
-		}
 
 		g_spNewGameWindow->Update();
 		g_c3ui->AddWindow(g_spNewGameWindow);

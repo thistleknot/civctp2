@@ -27,6 +27,7 @@
 //
 // - Memory leaks repaired.
 // - Replaced old civ selection button bank by list box. (2-Jan-2008 Martin Gühmann)
+// - Rebuild the list after the civilisation DB changes (guidance: .tmp/guidance/codex-guidance-tribes.md).
 //
 //----------------------------------------------------------------------------
 
@@ -224,75 +225,87 @@ sint32 spnewgametribescreen_removeMyWindow(uint32 action, MBCHAR *lname)
 AUI_ERRCODE spnewgametribescreen_Initialize( aui_Control::ControlActionCallback *callback )
 {
 	AUI_ERRCODE errcode = AUI_ERRCODE_OK;
-	MBCHAR		windowBlock[ k_AUI_LDL_MAXBLOCK + 1 ];
-	MBCHAR		controlBlock[ k_AUI_LDL_MAXBLOCK + 1 ];
-	s_tribeIndex = INDEX_TRIBE_INVALID;
-	if ( g_spNewGameTribeScreen ) {
-		if(callback) {
+	MBCHAR windowBlock[k_AUI_LDL_MAXBLOCK + 1];
+	MBCHAR controlBlock[k_AUI_LDL_MAXBLOCK + 1];
+
+	if (g_spNewGameTribeScreen) {
+		if (callback)
 			g_spNewGameTribeScreen->Ok()->SetActionFuncAndCookie(callback, nullptr);
+
+		sint32 expectedItems = g_theCivilisationDB->NumRecords();
+#if !defined(USE_SHOW_BARBARIANS) && !defined(USE_SELECT_BARBARIANS)
+		if (expectedItems > PLAYER_INDEX_VANDALS)
+			--expectedItems;
+#endif
+		bool staleList = s_CivListBox->NumItems() != expectedItems;
+		for (sint32 i = 0; !staleList && i < s_CivListBox->NumItems(); ++i) {
+			ctp2_ListItem *item = (ctp2_ListItem *)s_CivListBox->GetItemByIndex(i);
+			staleList = !item || item->GetUserDataSint32() < 0 ||
+			            item->GetUserDataSint32() >= g_theCivilisationDB->NumRecords();
 		}
-		return AUI_ERRCODE_OK;
+		if (staleList) {
+			spnewgametribescreen_clearTribes();
+			s_skipIndex = 0;
+			spnewgametribescreen_addAllTribes();
+			s_tribeIndex = INDEX_TRIBE_INVALID;
+		}
+	} else {
+		s_tribeIndex = INDEX_TRIBE_INVALID;
+		strcpy(windowBlock, "SPNewGameTribeScreen");
+		{
+			g_spNewGameTribeScreen = new c3_PopupWindow(&errcode, aui_UniqueId(), windowBlock, 16, AUI_WINDOW_TYPE_FLOATING, false);
+			Assert(AUI_NEWOK(g_spNewGameTribeScreen, errcode));
+			if (!AUI_NEWOK(g_spNewGameTribeScreen, errcode)) return errcode;
+
+			g_spNewGameTribeScreen->Resize(g_spNewGameTribeScreen->Width(), g_spNewGameTribeScreen->Height());
+			g_spNewGameTribeScreen->GrabRegion()->Resize(g_spNewGameTribeScreen->Width(), g_spNewGameTribeScreen->Height());
+			g_spNewGameTribeScreen->SetStronglyModal(TRUE);
+		}
+
+		if (!callback) callback = spnewgametribescreen_backPress;
+		sprintf(controlBlock, "%s.%s", windowBlock, "Name");
+		g_spNewGameTribeScreen->AddTitle(controlBlock);
+		g_spNewGameTribeScreen->AddClose(callback);
+
+		s_CivListBox = (ctp2_ListBox *)aui_Ldl::BuildHierarchyFromRoot("SPNewGameTribeScreen.CivBox");
+		Assert(s_CivListBox);
+		spnewgametribescreen_addAllTribes();
+
+		sprintf(controlBlock, "%s.%s", windowBlock, "leadernamestatic");
+		s_leaderNameStatic = new c3_Static(&errcode, aui_UniqueId(), controlBlock);
+		sprintf(controlBlock, "%s.%s", windowBlock, "leadernametextfield");
+		s_leaderNameTextField = new C3TextField(&errcode, aui_UniqueId(), controlBlock);
+		sprintf(controlBlock, "%s.%s", windowBlock, "malefemaleswitchgroup");
+		s_maleFemaleSwitchGroup = new aui_SwitchGroup(&errcode, aui_UniqueId(), controlBlock);
+		sprintf(controlBlock, "%s.%s", windowBlock, "malefemaleswitchgroup.maleradio");
+		s_maleRadio = new aui_Radio(&errcode, aui_UniqueId(), controlBlock, spnewgametribescreen_malePress);
+		sprintf(controlBlock, "%s.%s", windowBlock, "malefemaleswitchgroup.femaleradio");
+		s_femaleRadio = new aui_Radio(&errcode, aui_UniqueId(), controlBlock, spnewgametribescreen_femalePress);
+
+		if (g_isScenario && g_startInfoType == STARTINFOTYPE_NOLOCS) {
+			s_leaderNameTextField->Enable(FALSE);
+			s_maleRadio->Enable(FALSE);
+			s_femaleRadio->Enable(FALSE);
+		} else {
+			s_leaderNameTextField->Enable(TRUE);
+			s_maleRadio->Enable(TRUE);
+			s_femaleRadio->Enable(TRUE);
+		}
+
+		errcode = aui_Ldl::SetupHeirarchyFromRoot(windowBlock);
+		Assert(AUI_SUCCESS(errcode));
+		s_CivListBox->SetForceSelect(TRUE);
+		s_CivListBox->SetMultiSelect(FALSE);
+		s_CivListBox->SetActionFuncAndCookie(spnewgametribescreen_switchPress, nullptr);
 	}
 
-	strcpy(windowBlock, "SPNewGameTribeScreen");
-
-	{
-		g_spNewGameTribeScreen = new c3_PopupWindow( &errcode, aui_UniqueId(), windowBlock, 16, AUI_WINDOW_TYPE_FLOATING, false);
-		Assert( AUI_NEWOK(g_spNewGameTribeScreen, errcode) );
-		if ( !AUI_NEWOK(g_spNewGameTribeScreen, errcode) ) return errcode;
-
-		g_spNewGameTribeScreen->Resize(g_spNewGameTribeScreen->Width(),g_spNewGameTribeScreen->Height());
-		g_spNewGameTribeScreen->GrabRegion()->Resize(g_spNewGameTribeScreen->Width(),g_spNewGameTribeScreen->Height());
-		g_spNewGameTribeScreen->SetStronglyModal(TRUE);
+	ctp2_ListItem *selectedItem = s_CivListBox->NumItems() > 0
+		? (ctp2_ListItem *)s_CivListBox->GetItemByIndex(0) : NULL;
+	if (selectedItem) {
+		s_CivListBox->SelectItem(0);
+		StringId nameString = g_theCivilisationDB->Get(selectedItem->GetUserDataSint32())->GetLeaderNameMale();
+		s_leaderNameTextField->SetFieldText(g_theStringDB->GetNameStr(nameString));
 	}
-
-	if ( !callback ) callback = spnewgametribescreen_backPress;
-
-	sprintf( controlBlock, "%s.%s", windowBlock, "Name" );
-	g_spNewGameTribeScreen->AddTitle( controlBlock );
-	g_spNewGameTribeScreen->AddClose( callback );
-
-	s_CivListBox = (ctp2_ListBox *)aui_Ldl::BuildHierarchyFromRoot("SPNewGameTribeScreen.CivBox");
-
-	Assert(s_CivListBox);
-
-	spnewgametribescreen_addAllTribes();
-
-	sprintf( controlBlock, "%s.%s", windowBlock, "leadernamestatic" );
-	s_leaderNameStatic = new c3_Static(&errcode, aui_UniqueId(), controlBlock );
-
-	sprintf( controlBlock, "%s.%s", windowBlock, "leadernametextfield" );
-	s_leaderNameTextField = new C3TextField(&errcode, aui_UniqueId(), controlBlock );
-
-	sprintf( controlBlock, "%s.%s", windowBlock, "malefemaleswitchgroup" );
-	s_maleFemaleSwitchGroup = new aui_SwitchGroup( &errcode, aui_UniqueId(), controlBlock );
-
-	sprintf( controlBlock, "%s.%s", windowBlock, "malefemaleswitchgroup.maleradio" );
-	s_maleRadio = new aui_Radio(&errcode, aui_UniqueId(), controlBlock, spnewgametribescreen_malePress );
-
-	sprintf( controlBlock, "%s.%s", windowBlock, "malefemaleswitchgroup.femaleradio" );
-	s_femaleRadio = new aui_Radio(&errcode, aui_UniqueId(), controlBlock, spnewgametribescreen_femalePress );
-
-	if(g_isScenario && g_startInfoType == STARTINFOTYPE_NOLOCS)
-	{
-		s_leaderNameTextField->Enable(FALSE);
-		s_maleRadio->Enable(FALSE);
-		s_femaleRadio->Enable(FALSE);
-	}
-	else
-	{
-		s_leaderNameTextField->Enable(TRUE);
-		s_maleRadio->Enable(TRUE);
-		s_femaleRadio->Enable(TRUE);
-	}
-
-	errcode = aui_Ldl::SetupHeirarchyFromRoot( windowBlock );
-	Assert( AUI_SUCCESS(errcode) );
-
-	s_CivListBox->SetForceSelect(TRUE);
-	s_CivListBox->SetMultiSelect(FALSE);
-	s_CivListBox->SetActionFuncAndCookie(spnewgametribescreen_switchPress, nullptr);
-
 	return AUI_ERRCODE_OK;
 }
 
@@ -369,51 +382,43 @@ void spnewgametribescreen_backPress(aui_Control *control, uint32 action, uint32 
 
 void spnewgametribescreen_switchPress(aui_Control *control, uint32 action, uint32 data, Cookie cookie)
 {
-	//this is for the text boxes and updated once selected
-	if ( action != (uint32)AUI_LISTBOX_ACTION_SELECT ) return;
+	if (action != (uint32)AUI_LISTBOX_ACTION_SELECT) return;
 
 	ctp2_ListItem *item = (ctp2_ListItem *)s_CivListBox->GetSelectedItem();
+	if (!item) return;
 	sint32 civ = item->GetUserDataSint32();
-	StringId nameString;
+	if (civ < 0 || civ >= g_theCivilisationDB->NumRecords()) return;
 
-	if ( s_maleRadio->GetState() )
-		nameString = g_theCivilisationDB->Get(civ)->GetLeaderNameMale();
-	else
-		nameString = g_theCivilisationDB->Get(civ)->GetLeaderNameFemale();
-
-	s_leaderNameTextField->SetFieldText( g_theStringDB->GetNameStr(nameString) );
+	StringId nameString = s_maleRadio->GetState()
+		? g_theCivilisationDB->Get(civ)->GetLeaderNameMale()
+		: g_theCivilisationDB->Get(civ)->GetLeaderNameFemale();
+	s_leaderNameTextField->SetFieldText(g_theStringDB->GetNameStr(nameString));
 }
 
 void spnewgametribescreen_malePress(aui_Control *control, uint32 action, uint32 data, Cookie cookie)
 {
-	if ( action != (uint32)AUI_SWITCH_ACTION_ON ) return;
+	if (action != (uint32)AUI_SWITCH_ACTION_ON) return;
 
 	ctp2_ListItem *item = (ctp2_ListItem *)s_CivListBox->GetSelectedItem();
+	if (!item) return;
+	sint32 civ = item->GetUserDataSint32();
+	if (civ < 0 || civ >= g_theCivilisationDB->NumRecords()) return;
 
-	if(item)
-	{
-		sint32 civ = item->GetUserDataSint32();
-
-		StringId const  nameString  = g_theCivilisationDB->Get(civ)->GetLeaderNameMale();
-
-		s_leaderNameTextField->SetFieldText(g_theStringDB->GetNameStr(nameString));
-	}
+	StringId const nameString = g_theCivilisationDB->Get(civ)->GetLeaderNameMale();
+	s_leaderNameTextField->SetFieldText(g_theStringDB->GetNameStr(nameString));
 }
 
 void spnewgametribescreen_femalePress(aui_Control *control, uint32 action, uint32 data, Cookie cookie)
 {
-	if ( action != (uint32)AUI_SWITCH_ACTION_ON ) return;
+	if (action != (uint32)AUI_SWITCH_ACTION_ON) return;
 
 	ctp2_ListItem *item = (ctp2_ListItem *)s_CivListBox->GetSelectedItem();
+	if (!item) return;
+	sint32 civ = item->GetUserDataSint32();
+	if (civ < 0 || civ >= g_theCivilisationDB->NumRecords()) return;
 
-	if(item)
-	{
-		sint32 civ = item->GetUserDataSint32();
-
-		StringId const  nameString  = g_theCivilisationDB->Get(civ)->GetLeaderNameFemale();
-
-		s_leaderNameTextField->SetFieldText(g_theStringDB->GetNameStr(nameString));
-	}
+	StringId const nameString = g_theCivilisationDB->Get(civ)->GetLeaderNameFemale();
+	s_leaderNameTextField->SetFieldText(g_theStringDB->GetNameStr(nameString));
 }
 
 void spnewgametribescreen_clearTribes()
@@ -439,32 +444,29 @@ void spnewgametribescreen_addTribeNoDuplicate(sint32 tribe)
 
 void spnewgametribescreen_addTribe(sint32 tribe)
 {
-	if (tribe < 0)
+	if (tribe < 0 || tribe >= g_theCivilisationDB->NumRecords())
 		return;
 
 #if defined(USE_SHOW_BARBARIANS) || defined(USE_SELECT_BARBARIANS)
 	// Always create a list item
 #else
-	if (PLAYER_INDEX_VANDALS == tribe) // PLAYER_INDEX_VANDALS obsolete
-	{
+	if (PLAYER_INDEX_VANDALS == tribe) {
 		s_skipIndex = tribe;
-	}
-	else
+	} else
 #endif
 	{
 		ctp2_ListItem *item = (ctp2_ListItem *)aui_Ldl::BuildHierarchyFromRoot("CivItem");
 		Assert(item);
-		if(!item)
+		if (!item)
 			return;
 
 		item->SetUserData(tribe);
-
 		ctp2_Static *text = (ctp2_Static *)item->GetChildByIndex(0);
 		Assert(text);
-		if(!text)
+		if (!text)
 			return;
 
-		text->SetText(g_theStringDB->GetNameStr(g_theCivilisationDB->Get(tribe)->GetPluralCivName()));  //singular? // Maybe change to civ name and then we can change it to Roman Empire, instead of having the boring name Romans
+		text->SetText(g_theStringDB->GetNameStr(g_theCivilisationDB->Get(tribe)->GetPluralCivName()));
 		item->SetCompareCallback(spnewgametribescreen_CompareItems);
 		s_CivListBox->AddItem(item);
 	}
