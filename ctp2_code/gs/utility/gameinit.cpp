@@ -1136,6 +1136,9 @@ sint32 spriteEditor_Initialize(sint32 mWidth, sint32 mHeight)
 			break;
 		}
 
+	sint32 const maxCivPlayers = g_theCivilisationDB->NumRecords() - 1;
+	if (nPlayers > maxCivPlayers) nPlayers = maxCivPlayers;
+
 	g_theProfileDB->SetNPlayers(nPlayers);
 
 	Assert(g_theWorld);
@@ -1533,6 +1536,8 @@ sint32 gameinit_Initialize(sint32 mWidth, sint32 mHeight, CivArchive *archive)
 		if (k_MAX_PLAYERS < nPlayers) {
 			exit(0);
 		}
+		sint32 const maxCivPlayers = g_theCivilisationDB->NumRecords() - 1;
+		if (nPlayers > maxCivPlayers) nPlayers = maxCivPlayers;
 		g_theProfileDB->SetNPlayers(nPlayers);
 
 	}
