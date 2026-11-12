@@ -714,6 +714,9 @@ sint16 GaiaController::NumWondersBuilt() const
 
 sint16 GaiaController::NumSatellitesRequired() const
 {
+	if (sm_satelliteEndgameIndex < 0)
+		return 0;
+
 	sint32 value = 0;
 	g_theEndGameObjectDB->Get(sm_satelliteEndgameIndex)->GetMinNeeded(value);
 
@@ -722,6 +725,9 @@ sint16 GaiaController::NumSatellitesRequired() const
 
 sint16 GaiaController::MaxSatellitesAllowed() const
 {
+	if (sm_satelliteEndgameIndex < 0)
+		return 0;
+
 	sint32 value = 0;
 	g_theEndGameObjectDB->Get(sm_satelliteEndgameIndex)->GetMaxNeeded(value);
 
@@ -730,6 +736,9 @@ sint16 GaiaController::MaxSatellitesAllowed() const
 
 sint16 GaiaController::NumMainframesRequired() const
 {
+	if (sm_mainframeEndgameIndex < 0)
+		return 32767;
+
 	sint32 value = 0;
 	g_theEndGameObjectDB->Get(sm_mainframeEndgameIndex)->GetMinNeeded(value);
 
@@ -738,6 +747,9 @@ sint16 GaiaController::NumMainframesRequired() const
 
 sint16 GaiaController::NumTowersRequired() const
 {
+	if (sm_towerEndgameIndex < 0)
+		return 0;
+
 	sint32 value = 0;
 	g_theEndGameObjectDB->Get(sm_towerEndgameIndex)->GetMinNeeded(value);
 
@@ -746,6 +758,9 @@ sint16 GaiaController::NumTowersRequired() const
 
 double GaiaController::TowerCoverageRequired() const
 {
+	if (sm_towerEndgameIndex < 0)
+		return 0.0;
+
 	double value = 0;
 	g_theEndGameObjectDB->Get(sm_towerEndgameIndex)->GetMinCoverage(value);
 
@@ -754,6 +769,9 @@ double GaiaController::TowerCoverageRequired() const
 
 sint16 GaiaController::GetTowerRadius() const
 {
+	if (sm_towerEndgameIndex < 0 || sm_satelliteEndgameIndex < 0)
+		return 0;
+
 	Assert(sm_towerEndgameIndex >= 0);
 	const EndGameObjectRecord *tower_rec =
 		g_theEndGameObjectDB->Get(sm_towerEndgameIndex);
