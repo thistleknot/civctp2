@@ -98,6 +98,28 @@ sint32 spnewgamescreen_displayMyWindow()
 	sint32 retval = g_spNewGameWindow ? 0 : spnewgamescreen_Initialize();
 	spnewgametribescreen_Initialize();
 
+	sint32 const civCount = g_theCivilisationDB->NumRecords();
+	sint32 const profileCivIndex = g_theProfileDB->GetCivIndex();
+	sint32 const civIndex = (profileCivIndex >= 0 && profileCivIndex < civCount)
+		? profileCivIndex
+		: (civCount > 1 ? 1 : 0);
+
+	if (g_spNewGameWindow) {
+		if (profileCivIndex != civIndex) {
+			g_theProfileDB->SetCivIndex(civIndex);
+			g_theProfileDB->DefaultSettings();
+			g_theProfileDB->SetCivIndex(profileCivIndex);
+		}
+		else {
+			g_theProfileDB->DefaultSettings();
+		}
+		g_spNewGameWindow->m_useCustomMap = false;
+		g_civPaths->ClearCurScenarioPath();
+
+		if (g_slicEngine)
+			SlicEngine::Reload(g_slic_filename);
+	}
+
 	sint32 const tribeIndex = spnewgametribescreen_getTribeIndex();
 	if ((tribeIndex < 0) || (tribeIndex >= INDEX_TRIBE_INVALID)) {
 		spnewgamescreen_setPlayerName(g_theProfileDB->GetLeaderName());
@@ -108,13 +130,6 @@ sint32 spnewgamescreen_displayMyWindow()
 	}
 
 	if (g_spNewGameWindow) {
-		g_theProfileDB->DefaultSettings();
-		g_spNewGameWindow->m_useCustomMap = false;
-		g_civPaths->ClearCurScenarioPath();
-
-		if (g_slicEngine)
-			SlicEngine::Reload(g_slic_filename);
-
 		g_spNewGameWindow->Update();
 		g_c3ui->AddWindow(g_spNewGameWindow);
 	}
@@ -313,7 +328,11 @@ void spnewgamescreen_tribePress( aui_Control *control, uint32 action, uint32 dat
 
 	spnewgametribescreen_displayMyWindow( nullptr, TRUE );
 
-	sint32 index = (sint32)g_theProfileDB->GetCivIndex();
+	sint32 const civCount = g_theCivilisationDB->NumRecords();
+	sint32 const profileCivIndex = (sint32)g_theProfileDB->GetCivIndex();
+	sint32 const index = (profileCivIndex >= 0 && profileCivIndex < civCount)
+		? profileCivIndex
+		: (civCount > 1 ? 1 : 0);
 
 	const sint32 size = k_MAX_NAME_LEN;
 	MBCHAR lname[ size + 1 ];

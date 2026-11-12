@@ -111,12 +111,12 @@ sint32 spnewgametribescreen_getTribeIndex( void )
 
 void spnewgametribescreen_setTribeIndex( sint32 index, MBCHAR *lname )
 {
-
-	if (index < 0)
-	{
-		s_tribeIndex = INDEX_TRIBE_INVALID;
+	if (!g_theCivilisationDB || g_theCivilisationDB->NumRecords() <= 0)
 		return;
-	}
+
+	sint32 const civCount = g_theCivilisationDB->NumRecords();
+	if (index < 0 || index >= civCount)
+		index = civCount > 1 ? 1 : 0;
 
 	//s_CivListBox->SelectItem(index);
 
@@ -392,7 +392,9 @@ void spnewgametribescreen_switchPress(aui_Control *control, uint32 action, uint3
 	StringId nameString = s_maleRadio->GetState()
 		? g_theCivilisationDB->Get(civ)->GetLeaderNameMale()
 		: g_theCivilisationDB->Get(civ)->GetLeaderNameFemale();
-	s_leaderNameTextField->SetFieldText(g_theStringDB->GetNameStr(nameString));
+	MBCHAR const *leaderName = g_theStringDB->GetNameStr(nameString);
+	s_leaderNameTextField->SetFieldText(leaderName);
+	spnewgamescreen_setPlayerName(leaderName);
 }
 
 void spnewgametribescreen_malePress(aui_Control *control, uint32 action, uint32 data, Cookie cookie)
@@ -405,7 +407,9 @@ void spnewgametribescreen_malePress(aui_Control *control, uint32 action, uint32 
 	if (civ < 0 || civ >= g_theCivilisationDB->NumRecords()) return;
 
 	StringId const nameString = g_theCivilisationDB->Get(civ)->GetLeaderNameMale();
-	s_leaderNameTextField->SetFieldText(g_theStringDB->GetNameStr(nameString));
+	MBCHAR const *leaderName = g_theStringDB->GetNameStr(nameString);
+	s_leaderNameTextField->SetFieldText(leaderName);
+	spnewgamescreen_setPlayerName(leaderName);
 }
 
 void spnewgametribescreen_femalePress(aui_Control *control, uint32 action, uint32 data, Cookie cookie)
@@ -418,7 +422,9 @@ void spnewgametribescreen_femalePress(aui_Control *control, uint32 action, uint3
 	if (civ < 0 || civ >= g_theCivilisationDB->NumRecords()) return;
 
 	StringId const nameString = g_theCivilisationDB->Get(civ)->GetLeaderNameFemale();
-	s_leaderNameTextField->SetFieldText(g_theStringDB->GetNameStr(nameString));
+	MBCHAR const *leaderName = g_theStringDB->GetNameStr(nameString);
+	s_leaderNameTextField->SetFieldText(leaderName);
+	spnewgamescreen_setPlayerName(leaderName);
 }
 
 void spnewgametribescreen_clearTribes()
