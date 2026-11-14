@@ -108,7 +108,6 @@ sint32 spnewgamescreen_displayMyWindow()
 		if (profileCivIndex != civIndex) {
 			g_theProfileDB->SetCivIndex(civIndex);
 			g_theProfileDB->DefaultSettings();
-			g_theProfileDB->SetCivIndex(profileCivIndex);
 		}
 		else {
 			g_theProfileDB->DefaultSettings();
