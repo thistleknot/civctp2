@@ -321,15 +321,15 @@ void UnitData::Create(const sint32 t,
 
 	m_owner = o;
 
-	m_hp              = CalculateTotalHP();
-	m_fuel            = CalculateTotalFuel();
-	m_movement_points = CalculateTotalMovePoints();
-
-	// MoM spell buff overlays — start at zero
+	// MoM spell buff overlays must be zero before CalculateTotalMovePoints reads m_moveMod.
 	m_attackMod  = 0;
 	m_defenseMod = 0;
 	m_hpMaxMod   = 0;
 	m_moveMod    = 0;
+
+	m_hp              = CalculateTotalHP();
+	m_fuel            = CalculateTotalFuel();
+	m_movement_points = CalculateTotalMovePoints();
 
 	// PFT 17 Mar 05, don't FIRST_MOVE flag immobile units
 	if( !IsImmobile() )
