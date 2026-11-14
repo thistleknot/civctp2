@@ -1,0 +1,16 @@
+@startuml
+left to right direction
+actor "CTP2 Player" as Player
+actor "Keyboard Input Handler" as Keyboard
+rectangle "CTP2 Executable" {
+  usecase "Choose Numbered SLIC Response" as UC007
+  usecase "Dispatch Numeric SLIC Response" as UC008
+  usecase "Delegate Unit to Auto-Explore" as UC005
+  usecase "Advance Auto-Explore Order" as UC006
+}
+Player --> UC007
+Keyboard --> UC008
+UC007 .> UC008 : uses
+Player --> UC005
+UC005 .> UC006 : advances
+@enduml
