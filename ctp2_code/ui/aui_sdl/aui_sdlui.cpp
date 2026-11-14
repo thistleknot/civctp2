@@ -123,6 +123,12 @@ AUI_ERRCODE aui_SDLUI::CreateNativeScreen( BOOL useExclusiveMode )
 
 	// Windows are right now not resizable, the content is also be shrunken, which should not happen.
 	uint32 sdl_flags = g_theProfileDB->IsWindowedMode() ? SDL_WINDOW_ALLOW_HIGHDPI /*| SDL_WINDOW_RESIZABLE*/ : SDL_WINDOW_FULLSCREEN_DESKTOP;
+	// SDL's default renderer choice (Direct3D 9) faults inside the GPU driver while the
+	// renderer is created (access violation at CreateNativeScreen, release build, measured
+	// 2026-11-14: direct3d crashes, direct3d11 / opengl / software run). Prefer Direct3D 11.
+	// SDL_SetHint at default priority leaves an SDL_RENDER_DRIVER environment variable in
+	// charge, so the test harness can still force the software renderer.
+	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
 
 	m_SDLWindow = SDL_CreateWindow("Call To Power 2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 	                               m_width, m_height, sdl_flags);
