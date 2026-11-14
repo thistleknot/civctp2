@@ -11295,7 +11295,7 @@ DP_API dp_result_t DP_APIX dpGetParameterLong(dp_t *dp, sint32 paramId, sint32 *
 	req.param_num = paramId;
 	req.param_value = comm_PARAM_BOGUSVALUE;
 	req.param_value2 = comm_PARAM_BOGUSVALUE;
-	ok = commSetParam(&req, &resp, dp->dpio->commPtr);
+	ok = commSetParam(&req, &resp);
 	if (!ok) {
 		DPRINT(("dpGetParameterLong: can't get pparamVal; status:%d\n", resp.status));
 		return resp.status;
@@ -11462,3 +11462,4 @@ DP_API dp_result_t dpGetStats(
 	return dp_RES_OK;
 }
 #endif
+

@@ -93,11 +93,22 @@ aui_SDLUI::aui_SDLUI
 	if ( !AUI_SUCCESS(*retval) ) return;
 }
 
+// Defined in aui_sdl.cpp -- the headless UI-trigger WM_COPYDATA hook. It must
+// be installed from a code path the game ACTUALLY runs: aui_SDLUI (this class)
+// is what c3ui instantiates, and its ctor calls THIS InitCommon() -- whereas
+// aui_SDL::InitCommon(BOOL) (where the hook and SDL_SetEventFilter also sit)
+// is never called for the real game. Installing here is what makes the hook
+// live.
+extern void MoM_WindowsMessageHook(void *, void *, unsigned int,
+                                   Uint64, Sint64);
+
 AUI_ERRCODE aui_SDLUI::InitCommon()
 {
 	m_savedMouseAnimFirstIndex = 0;
 	m_savedMouseAnimLastIndex = 0;
 	m_savedMouseAnimCurIndex = 0;
+
+	SDL_SetWindowsMessageHook(MoM_WindowsMessageHook, NULL);
 
 	return AUI_ERRCODE_OK;
 }

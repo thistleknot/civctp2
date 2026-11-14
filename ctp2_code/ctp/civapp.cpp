@@ -143,6 +143,7 @@
 #include "ctpai.h"
 #include "ctp_finger.h"
 #include "cursormanager.h"
+#include "ScriptTargetMode.h"
 #include "DB.h"
 #include "DBLexer.h"
 #include "debugmemory.h"
@@ -1299,6 +1300,7 @@ sint32 CivApp::InitializeApp(HINSTANCE hInstance, int iCmdShow)
 	}
 
 	CursorManager::Initialize();
+	ScriptTargetMode::Initialize();
 
 	InitializeImageMaps();
 
@@ -1532,6 +1534,7 @@ void CivApp::CleanupApp(void)
 		gameEventManager_Cleanup();
 		g_network.Cleanup();
 		CursorManager::Cleanup();
+		ScriptTargetMode::Cleanup();
 		sharedsurface_Cleanup();
 		CleanupAppUI();
 		cleanup_keymap();

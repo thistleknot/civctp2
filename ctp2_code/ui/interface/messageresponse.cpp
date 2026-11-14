@@ -149,9 +149,10 @@ AUI_ERRCODE MessageResponseStandard::InitCommon( const MBCHAR *ldlBlock, Message
 
 
 		if ( lastbutton ) {
-			button->Move( lastbutton->X() -
-						  button->Width() -
-						  g_messageRespButtonSpacing, button->Y() );
+			// Vertical stacking: each button below the previous one
+			button->Move( lastbutton->X(),
+						  lastbutton->Y() + lastbutton->Height() +
+						  g_messageRespButtonSpacing );
 		} else {
 
 			button->Move( button->X() -
@@ -175,6 +176,16 @@ AUI_ERRCODE MessageResponseStandard::InitCommon( const MBCHAR *ldlBlock, Message
 		lastbutton = button;
 
 		responseCount++;
+	}
+
+	// Auto-resize window height to fit vertically stacked buttons.
+	// The last button's bottom edge + padding determines the minimum height.
+	if (lastbutton) {
+		sint32 neededHeight = lastbutton->Y() + lastbutton->Height() +
+		                      g_messageRespButtonSpacing + 20; // 20px bottom margin
+		if (neededHeight > window->Height()) {
+			window->Resize(window->Width(), neededHeight);
+		}
 	}
 
 	m_dontShowButton=NULL;

@@ -91,6 +91,45 @@ BOOL                        g_launchIntoCheatMode = FALSE;
 
 void spnewgamescreen_SetupHotseatOrEmail();
 
+static void spnewgamescreen_reloadCivilisationPicker()
+{
+	if (!g_civApp || !g_spNewGameWindow)
+	{
+		return;
+	}
+
+	MBCHAR leaderName[k_MAX_NAME_LEN + 1];
+	leaderName[0] = '\0';
+
+	if (g_spNewGameTribeScreen && spnewgametribescreen_getTribeIndex() != INDEX_TRIBE_INVALID)
+	{
+		spnewgametribescreen_getLeaderName(leaderName);
+	}
+	else if (g_theProfileDB && g_theProfileDB->GetLeaderName())
+	{
+		strcpy(leaderName, g_theProfileDB->GetLeaderName());
+	}
+
+	sint32 tribeIndex = g_theProfileDB ? g_theProfileDB->GetCivIndex() : INDEX_TRIBE_INVALID;
+
+	spnewgametribescreen_Cleanup();
+	g_civApp->CleanupAppDB();
+	g_civApp->InitializeAppDB();
+	spnewgametribescreen_Initialize();
+
+	if (g_theCivilisationDB && g_theCivilisationDB->NumRecords() > 1)
+	{
+		if ((tribeIndex <= 0) || (tribeIndex >= g_theCivilisationDB->NumRecords()))
+		{
+			tribeIndex = 1;
+		}
+
+		spnewgametribescreen_setTribeIndex(tribeIndex, leaderName[0] ? leaderName : NULL);
+	}
+
+	g_spNewGameWindow->Update();
+}
+
 sint32 spnewgamescreen_displayMyWindow()
 {
 	g_launchIntoCheatMode = FALSE;
@@ -401,9 +440,17 @@ void spnewgamescreen_editorPress( aui_Control *control, uint32 action, uint32 da
 
 void spnewgamescreen_scenarioExitCallback(aui_Control *control, uint32 action, uint32 data, Cookie cookie )
 {
+	const MBCHAR *scenarioPath = g_civPaths->GetCurScenarioPath();
+	if (!scenarioPath || !c3files_PathIsValid(scenarioPath)) {
+		if (g_spNewGameWindow) {
+			g_spNewGameWindow->Update();
+		}
+		return;
+	}
+
 	MBCHAR	tempPath[_MAX_PATH];
 	sprintf(tempPath, "%s%s%s",
-	        g_civPaths->GetCurScenarioPath(),
+	        scenarioPath,
 	        FILE_SEP,
 	        k_SCENARIO_DEFAULT_SAVED_GAME_NAME
 	       );
@@ -423,7 +470,7 @@ void spnewgamescreen_scenarioExitCallback(aui_Control *control, uint32 action, u
 
 		if (GameFile::FetchExtendedSaveInfo(tempPath, saveInfo)) {
 			MBCHAR scenPath[_MAX_PATH];
-			strcpy(scenPath, g_civPaths->GetCurScenarioPath());
+			strcpy(scenPath, scenarioPath);
 			g_startInfoType = saveInfo->startInfoType;
 			loadsavescreen_BeginLoadProcess(saveInfo, scenPath);
 		}
@@ -433,7 +480,7 @@ void spnewgamescreen_scenarioExitCallback(aui_Control *control, uint32 action, u
 		return;
 	}
 
-	g_spNewGameWindow->Update();
+	spnewgamescreen_reloadCivilisationPicker();
 }
 
 
@@ -447,7 +494,7 @@ void spnewgamescreen_scenarioPress(aui_Control *control, uint32 action, uint32 d
 	if (g_civPaths->GetCurScenarioPath())
 	{
 		g_civPaths->ClearCurScenarioPath();
-		g_spNewGameWindow->Update();
+		spnewgamescreen_reloadCivilisationPicker();
 	}
 	else
 	{

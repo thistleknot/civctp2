@@ -79,6 +79,11 @@ public:
 		sint32 x = 0,
 		sint32 y = 0 );
 
+	// MoM headless driver: fire this button's action exactly as a completed
+	// click/RETURN would (AUI_BUTTON_ACTION_EXECUTE). Implemented in .cpp
+	// because aui_Action is only forward-declared here.
+	void InjectPress( void );
+
 protected:
 	aui_Button()
 	:
