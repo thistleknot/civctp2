@@ -930,6 +930,10 @@ bool CivApp::InitializeAppDB(void)
 		return false;
 	}
 
+	MBCHAR civilisationPath[_MAX_PATH];
+	g_civPaths->FindFile(C3DIR_GAMEDATA, g_civilisation_filename, civilisationPath, true);
+	DPRINTF(k_DBG_FIX, ("CivApp::InitializeAppDB: civilisation file %s, records %d\n", civilisationPath, g_theCivilisationDB->NumRecords()));
+
 	// Fix the player index if it is out of range:
 	if(g_theProfileDB->GetCivIndex() >= g_theCivilisationDB->NumRecords())
 		g_theProfileDB->SetCivIndex(1); // Set to first non-Barbarian civ

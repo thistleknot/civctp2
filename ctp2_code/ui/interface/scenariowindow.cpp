@@ -52,6 +52,7 @@
 #include "civscenarios.h"
 
 #include "spnewgamewindow.h"
+#include "spnewgametribescreen.h"
 #include "scenariowindow.h"
 
 #include "profileDB.h"
@@ -631,6 +632,7 @@ void ScenarioWindow::SetProfileFromScenario( void )
 
 			g_civApp->CleanupAppDB();
 			g_civApp->InitializeAppDB((*(CivArchive *)(NULL)));
+			spnewgametribescreen_rebuildTribes();
 
 
 

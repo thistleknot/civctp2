@@ -826,6 +826,10 @@ template <class T> void QuadTree<T>::Insert(T newObj)
 {
 #if defined(_DEBUG)	
 	MapPoint pos = GetPos(newObj);
+	// Diagnostic only: prints the position the tree derives from the object and the
+	// tree's own bounds, so an out-of-range insert shows which of the two is wrong.
+	DPRINTF(k_DBG_FIX, ("QuadTree::Insert: pos (%d,%d) tree m_width %d m_height %d\n",
+	                    pos.x, pos.y, m_width, m_height));
 	Assert(pos.x >= 0 && pos.x < m_width);
 	Assert(pos.y >= 0 && pos.y < m_height);
 #endif

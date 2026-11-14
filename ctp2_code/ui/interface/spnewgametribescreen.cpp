@@ -244,10 +244,7 @@ AUI_ERRCODE spnewgametribescreen_Initialize( aui_Control::ControlActionCallback 
 			            item->GetUserDataSint32() >= g_theCivilisationDB->NumRecords();
 		}
 		if (staleList) {
-			spnewgametribescreen_clearTribes();
-			s_skipIndex = 0;
-			spnewgametribescreen_addAllTribes();
-			s_tribeIndex = INDEX_TRIBE_INVALID;
+			spnewgametribescreen_rebuildTribes();
 		}
 	} else {
 		s_tribeIndex = INDEX_TRIBE_INVALID;
@@ -430,6 +427,17 @@ void spnewgametribescreen_femalePress(aui_Control *control, uint32 action, uint3
 void spnewgametribescreen_clearTribes()
 {
 	s_CivListBox->Clear();
+}
+
+void spnewgametribescreen_rebuildTribes()
+{
+	if (!s_CivListBox)
+		return;
+
+	spnewgametribescreen_clearTribes();
+	s_skipIndex = 0;
+	spnewgametribescreen_addAllTribes();
+	s_tribeIndex = INDEX_TRIBE_INVALID;
 }
 
 void spnewgametribescreen_addTribeNoDuplicate(sint32 tribe)

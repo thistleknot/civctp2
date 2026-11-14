@@ -80,6 +80,7 @@ void spnewgametribescreen_setTribeIndex( sint32, MBCHAR *lname = NULL );
 void spnewgametribescreen_getLeaderName( MBCHAR *lname );
 
 void spnewgametribescreen_clearTribes();
+void spnewgametribescreen_rebuildTribes();
 void spnewgametribescreen_addTribeNoDuplicate(sint32 tribe);
 void spnewgametribescreen_addTribe(sint32 tribe);
 void spnewgametribescreen_removeTribe(sint32 tribe);
