@@ -2601,7 +2601,19 @@ bool Unit::UnitValidForOrder(const OrderRecord * order_rec) const
 bool Unit::Sink(sint32 chance)
 {
 	const UnitRecord *urec = GetDBRec();
-	const TerrainRecord * trec = g_theTerrainDB->Get(g_theWorld->GetTerrainType(RetPos()));
+
+	// An army whose unit sits off the map (BeginTurn at game start, civ count
+	// changed by the MOM civ file) cannot sink: it has no terrain to test.
+	// Skipping it keeps the turn running; the position itself is still unexplained.
+	MapPoint pos = RetPos();
+	if(pos.x < 0 || pos.y < 0
+	|| pos.x >= g_theWorld->GetXWidth() || pos.y >= g_theWorld->GetYHeight())
+	{
+		DPRINTF(k_DBG_FIX, ("Unit::Sink: unit off map at (%d,%d), skipped\n", pos.x, pos.y));
+		return false;
+	}
+
+	const TerrainRecord * trec = g_theTerrainDB->Get(g_theWorld->GetTerrainType(pos));
 
 	if(urec->GetCanSinkInSea()
 	&& trec->GetMovementTypeSea()
