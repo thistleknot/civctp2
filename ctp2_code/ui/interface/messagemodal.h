@@ -69,6 +69,8 @@ public:
 	virtual AUI_ERRCODE InitCommon( const MBCHAR *ldlBlock, Message data );
 
 	void BringBorderToTop();
+	// Recognize this dialog and its decorative windows as one keyboard surface.
+	bool OwnsKeyboardSurface(const aui_Window *window) const;
 	AUI_ERRCODE AddBordersToUI();
 	AUI_ERRCODE RemoveBordersFromUI();
 

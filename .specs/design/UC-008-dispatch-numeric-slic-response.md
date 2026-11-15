@@ -7,7 +7,7 @@
 **Primary Actor:** CTP2 Keyboard Input Handler  
 **Goal:** Resolve a digit to one active SLIC response and preserve ordinary response lifecycle behavior.  
 **Trigger:** A keydown reaches the game while a SLIC response menu is the topmost input surface.  
-**Status:** Draft  
+**Status:** Tested
 **Type:** System
 
 **Requirements:** [SM-REQ-001, SM-REQ-002, SM-REQ-003, SM-REQ-004, SM-REQ-005](../reqs/ctp2-slic-numeric-choice.rst)
@@ -19,12 +19,12 @@
 
 ## Main Success Scenario
 
-1. `ui_HandleKeypress` receives a digit keydown.
-2. The handler confirms the active topmost surface is a SLIC response menu.
-3. The handler resolves the digit against response numeric input values.
-4. If exactly one response matches, the handler dispatches through that response's existing UI action.
+1. SDL translates top-row and keypad digit events to the ASCII digit delivered to `ui_HandleKeypress`.
+2. `ui_HandleKeypress` receives the digit through one input route.
+3. The handler resolves a topmost alertbox border to its owning dialog; unrelated windows retain keyboard ownership.
+4. The top window offers the digit to its controls; a SLIC response button with that unique action key activates its existing UI action.
 5. The ordinary SLIC callback runs the response body once.
-6. Any new confirmation menu becomes the active response surface and remains visible.
+6. Any new confirmation menu creates its own response buttons and remains visible.
 
 ## Alternative Flows
 
@@ -33,7 +33,7 @@
 **Trigger:** No active response has the pressed digit as its input value (step 3).  
 **Flow:**
 
-1. The handler declines the SLIC shortcut.
+1. No response button has the digit action key.
 2. The original digit follows normal key handling. Use case ends.
 
 ### A2: Multiple numeric responses match
@@ -41,7 +41,7 @@
 **Trigger:** Two or more active responses share the pressed numeric value (step 3).  
 **Flow:**
 
-1. The handler declines the ambiguous shortcut.
+1. No response button receives a duplicated digit action key.
 2. The message and response callbacks remain unchanged. Use case ends.
 
 ### A3: A non-SLIC window owns input
@@ -49,8 +49,8 @@
 **Trigger:** The topmost input surface is not a SLIC response menu (step 2).  
 **Flow:**
 
-1. The SLIC shortcut resolver is not called.
-2. The digit is delivered to the owning window. Use case ends.
+1. The SLIC response button is not the top-window keyboard target.
+2. The digit is delivered through the owning control's normal path. Use case ends.
 
 ### A4: The response becomes invalid before dispatch
 

@@ -9,9 +9,18 @@
 
 #include <windows.h>        // WM_COPYDATA / COPYDATASTRUCT
 #include "SlicEngine.h"     // g_slicEngine->RunUITriggers (headless UI-trigger inject)
+#include "SlicObject.h"
+#include "SelItem.h"
 #include "aui_ldl.h"        // aui_Ldl::GetObject (headless button-press inject)
 #include "aui_button.h"     // aui_Button::InjectPress
 #include "aui_listbox.h"    // aui_ListBox::SelectItem (headless list selection)
+#include "c3ui.h"
+#include "aui_sdlsurface.h"
+#include "messagemodal.h"
+
+extern C3UI *g_c3ui;
+extern SelectedItem *g_selected_item;
+extern MessageModal *g_modalMessage;
 
 SDL_Surface *aui_SDL::m_lpdd = 0;
 uint32 aui_SDL::m_SDLClassId = aui_UniqueId();
@@ -55,7 +64,47 @@ void MoM_WindowsMessageHook(void * userdata, void * hWnd,
 			nameBuf[n] = 0;
 			FILE * dbg = fopen("H:\\mom_hook.log", "a");
 
-			if (strncmp(nameBuf, "press:", 6) == 0)
+			if (strncmp(nameBuf, "capture:", 8) == 0)
+			{
+				// PrintWindow can retain an old frame for a fully offscreen SDL
+				// window. Capture the same primary surface SDLDrawScreen presents.
+				aui_SDLSurface *surface = g_c3ui
+					? dynamic_cast<aui_SDLSurface *>(g_c3ui->Primary()) : NULL;
+				int result = surface ? SDL_SaveBMP(surface->GetSDLSurface(), nameBuf + 8) : -1;
+				if (dbg) { fprintf(dbg, "INJECT capture '%s' result=%d\n", nameBuf + 8, result); fclose(dbg); dbg = NULL; }
+			}
+			else if (strncmp(nameBuf, "response:", 9) == 0 && g_modalMessage)
+			{
+				// Generated response buttons share an LDL path. Use their visible
+				// label for the same InjectPress control action as named buttons.
+				ListPos position = g_modalMessage->ChildList()->GetHeadPosition();
+				for (size_t i = g_modalMessage->ChildList()->L(); i; --i)
+				{
+					aui_Button *button = dynamic_cast<aui_Button *>(g_modalMessage->ChildList()->GetNext(position));
+					if (button && button->GetText() && strcmp(button->GetText(), nameBuf + 9) == 0)
+					{
+						if (dbg) { fprintf(dbg, "INJECT response '%s' pressed\n", nameBuf + 9); fclose(dbg); dbg = NULL; }
+						button->InjectPress();
+						break;
+					}
+				}
+			}
+			else if (strncmp(nameBuf, "message:", 8) == 0)
+			{
+				// Seed an existing scripted dialog; acceptance keys still travel
+				// through SDLMessageHandler and the ordinary button action path.
+				if (g_slicEngine && g_selected_item && g_slicEngine->GetSegment(nameBuf + 8))
+				{
+					sint32 player = g_selected_item->GetVisiblePlayer();
+					SlicObject *object = new SlicObject(nameBuf + 8);
+					object->AddRecipient(player);
+					object->AddPlayer(player);
+					g_slicEngine->Execute(object);
+					if (dbg) { fprintf(dbg, "INJECT message '%s' player=%d executed\n", nameBuf + 8, player); fclose(dbg); dbg = NULL; }
+				}
+				else if (dbg) { fprintf(dbg, "INJECT message '%s' refused\n", nameBuf + 8); fclose(dbg); dbg = NULL; }
+			}
+			else if (strncmp(nameBuf, "press:", 6) == 0)
 			{
 				// Direct button press: works at the main menus, where the
 				// buttons are wired to C++ callbacks (SetActionFuncAndCookie),

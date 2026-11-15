@@ -246,6 +246,8 @@ AUI_ERRCODE aui_Control::InitCommon(
 	m_ActionFunc = ActionFunc,
 	m_cookie = cookie;
 	m_focusIndex = -1;
+	// An unbound control must not inherit a shortcut from recycled UI memory.
+	m_actionKey = 0;
 
 	memset( &m_keyboardEvent, 0, sizeof( m_keyboardEvent ) );
 	memset( &m_joystickEvent, 0, sizeof( m_joystickEvent ) );

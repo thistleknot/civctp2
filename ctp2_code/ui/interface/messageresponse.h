@@ -22,6 +22,8 @@ class MessageResponseSubmitAction;
 union Cookie;
 // MBCHAR
 
+void messageresponse_AssignNumberKeys(tech_WLList<ctp2_Button *> *buttons);
+
 class MessageResponseListItem : public c3_ListItem
 {
 public:

@@ -303,7 +303,15 @@ int display_Initialize(HINSTANCE hInstance, int iCmdShow)
 
 
 	if (!foundRes) {
-		if (display_IsLegalResolution(g_theProfileDB->GetScreenResWidth(),
+		// A window is a logical surface, independent of fullscreen mode lists.
+		// Keep the UI minimum while allowing 1024x768 on a portrait desktop.
+		bool windowedSize = false;
+#ifdef __AUI_USE_SDL__
+		windowedSize = g_theProfileDB->IsWindowedMode()
+			&& g_theProfileDB->GetScreenResWidth() >= 800
+			&& g_theProfileDB->GetScreenResHeight() >= 600;
+#endif
+		if (windowedSize || display_IsLegalResolution(g_theProfileDB->GetScreenResWidth(),
 									g_theProfileDB->GetScreenResHeight())) {
 			g_ScreenWidth = g_theProfileDB->GetScreenResWidth();
 			g_ScreenHeight = g_theProfileDB->GetScreenResHeight();

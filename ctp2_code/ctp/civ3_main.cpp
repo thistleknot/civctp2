@@ -1974,6 +1974,25 @@ int SDLMessageHandler(void* userdata, SDL_Event* event)
 			SDLKCONV(SDLK_RETURN, VK_RETURN + 128);
 			SDLKCONV(SDLK_KP_ENTER, VK_RETURN + 128);
 			SDLKCONV(SDLK_ESCAPE, VK_ESCAPE); // set to VK_ESCAPE to hit escape rules in keypress.cpp
+			// Forward unmodified digit keys so SLIC response labels can be used as choices.
+			SDLKCONVSHIFT(SDLK_1, '1', '\0');
+			SDLKCONVSHIFT(SDLK_2, '2', '\0');
+			SDLKCONVSHIFT(SDLK_3, '3', '\0');
+			SDLKCONVSHIFT(SDLK_4, '4', '\0');
+			SDLKCONVSHIFT(SDLK_5, '5', '\0');
+			SDLKCONVSHIFT(SDLK_6, '6', '\0');
+			SDLKCONVSHIFT(SDLK_7, '7', '\0');
+			SDLKCONVSHIFT(SDLK_8, '8', '\0');
+			SDLKCONVSHIFT(SDLK_9, '9', '\0');
+			SDLKCONV(SDLK_KP_1, '1');
+			SDLKCONV(SDLK_KP_2, '2');
+			SDLKCONV(SDLK_KP_3, '3');
+			SDLKCONV(SDLK_KP_4, '4');
+			SDLKCONV(SDLK_KP_5, '5');
+			SDLKCONV(SDLK_KP_6, '6');
+			SDLKCONV(SDLK_KP_7, '7');
+			SDLKCONV(SDLK_KP_8, '8');
+			SDLKCONV(SDLK_KP_9, '9');
 			SDLKCONVSHIFTANDCTRL(SDLK_UP, SDLK_UP + 256, SDLK_UP + 512, SDLK_UP + 768, SDLK_UP + 1024);
 			SDLKCONVSHIFTANDCTRL(SDLK_DOWN, SDLK_DOWN + 256, SDLK_DOWN + 512, SDLK_DOWN + 768, SDLK_DOWN + 1024);
 			SDLKCONVSHIFTANDCTRL(SDLK_LEFT, SDLK_LEFT + 256, SDLK_LEFT + 512, SDLK_LEFT + 768, SDLK_LEFT + 1024);
@@ -2031,6 +2050,11 @@ int SDLMessageHandler(void* userdata, SDL_Event* event)
 			default:
 				break;
 			} // end of switch (key)
+			// SDL may emit both KEYDOWN and TEXTINPUT. Let active text entry use
+			// its existing route so one physical digit cannot be dispatched twice.
+			if (SDL_IsTextInputActive() && wp >= '1' && wp <= '9') {
+				wp = '\0';
+			}
 			if (wp != '\0') {
 				ui_HandleKeypress(wp, 0);
 			}

@@ -24,6 +24,7 @@
 
 #include "SlicSegment.h"
 #include "CriticalMessagesPrefs.h"
+#include <cctype>
 
 extern C3UI			*g_c3ui;
 extern uint8 g_messageRespButtonSpacing;
@@ -76,6 +77,39 @@ void MessageResponseListItem::Update(void)
 sint32 MessageResponseListItem::Compare(c3_ListItem *item2, uint32 column)
 {
 	return 0;
+}
+
+static sint32 messageresponse_LabelDigit(ctp2_Button *button)
+{
+	const MBCHAR *text = button ? button->GetText() : NULL;
+	if (text && text[0] >= '1' && text[0] <= '9'
+	    && !std::isdigit(static_cast<unsigned char>(text[1])))
+	{
+		return text[0] - '0';
+	}
+	return 0;
+}
+
+void messageresponse_AssignNumberKeys(tech_WLList<ctp2_Button *> *buttons)
+{
+	sint32 counts[10] = { 0 };
+	ListPos position = buttons->GetHeadPosition();
+	for (size_t i = buttons->L(); i; --i)
+	{
+		ctp2_Button *button = buttons->GetNext(position);
+		sint32 digit = messageresponse_LabelDigit(button);
+		if (digit > 0)
+			++counts[digit];
+	}
+
+	position = buttons->GetHeadPosition();
+	for (size_t i = buttons->L(); i; --i)
+	{
+		ctp2_Button *button = buttons->GetNext(position);
+		sint32 digit = messageresponse_LabelDigit(button);
+		if (digit > 0 && counts[digit] == 1)
+			button->SetActionKey(static_cast<uint32>('0' + digit));
+	}
 }
 
 
@@ -187,6 +221,9 @@ AUI_ERRCODE MessageResponseStandard::InitCommon( const MBCHAR *ldlBlock, Message
 			window->Resize(window->Width(), neededHeight);
 		}
 	}
+	MessageData *responseData = window->GetMessage()->AccessData();
+	if (responseData && responseData->GetSlicSegment())
+		messageresponse_AssignNumberKeys(m_messageResponseButton);
 
 	m_dontShowButton=NULL;
 	m_identifier=NULL;

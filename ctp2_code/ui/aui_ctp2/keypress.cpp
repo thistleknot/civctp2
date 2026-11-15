@@ -393,6 +393,10 @@ sint32 ui_HandleKeypress(WPARAM wParam, LPARAM lParam)
 	}
 
 	aui_Window *topWindow = g_c3ui->TopWindow();
+	// Alertbox borders are separate windows above the dialog, but its buttons
+	// own keyboard responses. An unrelated popup must still keep precedence.
+	if(g_modalMessage && g_modalMessage->OwnsKeyboardSurface(topWindow))
+		topWindow = g_modalMessage;
 	if(topWindow && (!g_controlPanel || topWindow != g_controlPanel->GetWindow()) && topWindow != g_statusWindow)
 	{
 		if(topWindow->HandleKey(static_cast<uint32>(wParam)))

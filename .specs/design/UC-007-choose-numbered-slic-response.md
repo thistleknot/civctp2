@@ -7,7 +7,7 @@
 **Primary Actor:** CTP2 Player  
 **Goal:** Submit a numbered SLIC menu choice from the keyboard.  
 **Trigger:** The player presses the digit shown as the response's input value.  
-**Status:** Draft  
+**Status:** Tested
 **Type:** Business
 
 **Requirements:** [SM-REQ-001, SM-REQ-002, SM-REQ-003, SM-REQ-004, SM-REQ-005](../reqs/ctp2-slic-numeric-choice.rst)

@@ -20,6 +20,7 @@
 #include "messageactions.h"
 #include "messagewindow.h"
 #include "messageeyepoint.h"
+#include "messageresponse.h"    // messageresponse_AssignNumberKeys
 #include "player.h"             // g_player
 #include "SelItem.h"            // g_selected_item
 
@@ -324,6 +325,9 @@ AUI_ERRCODE MessageModal::CreateResponses( const MBCHAR *ldlBlock )
 		responseCount++;
 	}
 
+	if (m_message.AccessData()->GetSlicSegment())
+		messageresponse_AssignNumberKeys(m_messageModalResponseButton);
+
 	return AUI_ERRCODE_OK;
 }
 
@@ -383,6 +387,11 @@ void MessageModal::MouseLDragAway (aui_MouseEvent *mouseData)
 
 }
 
+
+bool MessageModal::OwnsKeyboardSurface(const aui_Window *window) const
+{
+	return window && (window == this || window == m_topBar || window == m_bottomBar);
+}
 
 void MessageModal::BringBorderToTop()
 {
