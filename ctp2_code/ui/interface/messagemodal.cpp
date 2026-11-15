@@ -17,6 +17,7 @@
 
 #include "message.h"
 #include "MessageData.h"
+#include "SlicSegment.h"            // SlicSegment::GetName
 #include "messageactions.h"
 #include "messagewindow.h"
 #include "messageeyepoint.h"
@@ -34,6 +35,15 @@ int messagemodal_CreateModalMessage( Message data )
 {
 	AUI_ERRCODE	errcode = AUI_ERRCODE_OK;
 	MBCHAR		windowBlock[ k_AUI_LDL_MAXBLOCK + 1 ];
+#ifdef _DEBUG
+	const SlicSegment *traceSegment = data.AccessData()->GetSlicSegment();
+	const char *traceName = traceSegment ? traceSegment->GetName() : NULL;
+	const bool traceMagicMenu = traceName && strcmp(traceName, "MagicMenu") == 0;
+	if(traceMagicMenu) {
+		DPRINTF(k_DBG_UI, ("SLIC_HANDOFF messagemodal_CreateModalMessage existing=%d buttons=%u\n",
+			g_modalMessage != NULL, data.AccessData()->GetNumButtons()));
+	}
+#endif
 
 	if ( g_modalMessage ) return 1;
 
@@ -53,7 +63,13 @@ int messagemodal_CreateModalMessage( Message data )
 		g_modalMessage->Move(0, 228);
 	}
 
-	g_c3ui->AddWindow( g_modalMessage );
+	AUI_ERRCODE addWindowResult = g_c3ui->AddWindow( g_modalMessage );
+#ifdef _DEBUG
+	if(traceMagicMenu) {
+		DPRINTF(k_DBG_UI, ("SLIC_HANDOFF messagemodal_CreateModalMessage addResult=%d attached=%d modal=%p\n",
+			addWindowResult, g_c3ui->GetWindow(g_modalMessage->Id()) != NULL, g_modalMessage));
+	}
+#endif
 
 	g_modalMessage->AddBordersToUI();
 

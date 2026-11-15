@@ -5202,6 +5202,18 @@ void Player::AddMessage(Message &msg)
 			}
 		}
 #endif
+#ifdef _DEBUG
+		const SlicSegment *traceSegment = msg.AccessData()->GetSlicSegment();
+		const char *traceName = traceSegment ? traceSegment->GetName() : NULL;
+		const bool traceMagicMenu = traceName && strcmp(traceName, "MagicMenu") == 0;
+		if(traceMagicMenu) {
+			const bool currentMessageValid = g_currentMessageWindow
+				&& g_currentMessageWindow->GetMessage()
+				&& g_theMessagePool->IsValid(*g_currentMessageWindow->GetMessage());
+			DPRINTF(k_DBG_UI, ("SLIC_HANDOFF Player::AddMessage owner=%d robot=%d useDirector=%d currentValid=%d alert=%d modal=%d\n",
+				m_owner, IsRobot(), msg.UseDirector(), currentMessageValid, msg.IsAlertBox(), messagewin_IsModalMessageDisplayed()));
+		}
+#endif
 		if(!IsRobot()
 #ifdef _PLAYTEST
 		   || g_robotMessages
@@ -5212,12 +5224,21 @@ void Player::AddMessage(Message &msg)
 			|| !g_currentMessageWindow->GetMessage()
 			|| !g_theMessagePool->IsValid(*g_currentMessageWindow->GetMessage()))
 			){
+#ifdef _DEBUG
+				if(traceMagicMenu) DPRINTF(k_DBG_UI, ("SLIC_HANDOFF Player::AddMessage route=director\n"));
+#endif
 					g_director->AddMessage(msg);
 				} else if(msg.IsAlertBox()) {
+#ifdef _DEBUG
+					if(traceMagicMenu) DPRINTF(k_DBG_UI, ("SLIC_HANDOFF Player::AddMessage route=modal alreadyDisplayed=%d\n", messagewin_IsModalMessageDisplayed()));
+#endif
 					if(!messagewin_IsModalMessageDisplayed()) {
 						messagewin_CreateModalMessage(msg);
 					}
 				} else {
+#ifdef _DEBUG
+					if(traceMagicMenu) DPRINTF(k_DBG_UI, ("SLIC_HANDOFF Player::AddMessage route=message-window\n"));
+#endif
 					messagewin_CreateMessage( msg );
 				if(msg.IsInstantMessage()
 						// JJB added this to prevent instant messages showing

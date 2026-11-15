@@ -79,10 +79,11 @@ public:
 		sint32 x = 0,
 		sint32 y = 0 );
 
-	// MoM headless driver: fire this button's action exactly as a completed
-	// click/RETURN would (AUI_BUTTON_ACTION_EXECUTE). Implemented in .cpp
-	// because aui_Action is only forward-declared here.
+	// Activate this enabled button through the click-completion path, including
+	// click-side SLIC UI triggers. Used by mouse completion and input hooks.
 	void InjectPress( void );
+	// Route action-key activation through the same path as mouse completion.
+	virtual void SendKeyboardAction( void );
 
 protected:
 	aui_Button()

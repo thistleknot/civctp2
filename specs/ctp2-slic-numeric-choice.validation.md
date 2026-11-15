@@ -1,36 +1,26 @@
-# SLIC numeric input validation
+# SLIC Numeric Choice Validation
 
-## CURRENT — 2026-11-14
+## CURRENT — 2026-11-15
 
-Tested Final-SDL executable SHA256:
-`68CDF120FE75ED988D8697A9FBB48B364E78B9464698171D1429C8FF08DEF820`.
-The same bytes are installed at `ctp2_program/ctp/ctp2.exe` in the game installation.
-Both Final-SDL and Debug-SDL Win32 builds exited 0.
+**State:** Spec, source changes, static SLIC audit, Debug-SDL build, and install are complete; visible gameplay acceptance is pending with the operator at 800x600.
 
-| Requirement / case | Observed result |
-|---|---|
-| SM-REQ-001: top-row 1 | Life Common page opens Bless confirmation |
-| SM-REQ-001: top-row 2 | Opens Endurance confirmation |
-| SM-REQ-001: top-row 3 | Opens Guardian Spirit confirmation |
-| SM-REQ-001: keypad 3 | Same Guardian Spirit dialog pixels as top-row 3 |
-| SM-REQ-002: matched click control | Native response button InjectPress for label 3 produces identical confirmation pixels |
-| SM-REQ-003: independent confirmation | Confirmation remains visible; another 3 leaves it unchanged |
-| SM-REQ-004: unmatched 9 | Original menu region is unchanged |
-| SM-REQ-004: duplicates and multi-digit labels | Production binding functions compiled against button fixtures; duplicate keys and 10 gold stay unbound |
-| SM-REQ-005: ordinary text input | Separate 1, 2, 3 key presses enter Alexander123 exactly once each in the leader field |
-| Exact reported summon page | MomSummonPick_life_1 opens; 3 consumes that choice through the existing callback and closes the menu |
-| Windowed resolution | Actual client 1024x768 on portrait desktop |
-| Background isolation | Owned HWND remained at (-32000, -32000); no cursor-relative placement or global input |
-| Installed runtime | Direct launch of installed ctp2.exe, without runtime overlay, captures the main menu and exits cleanly |
+**User journey:** `J` opens the same sphere-specific spellbook hub as Workings. A numbered spell or creature choice follows its click action to detail/review; a separate `1` commits and `0` cancels. The More page preserves Very Rare and Magic Status navigation.
 
-Runtime screenshots: source-worktree `.tmp/slic-acceptance/final_*.png`.
-Final startup fixture: game-installation `Scenarios/mom/tools/uiwalk/runs/20261114-173058`.
-Installed executable smoke: `Scenarios/mom/tools/uiwalk/runs/20261114-173552`.
-Dialog comparison used pixels x=17..361, y=245..394, excluding the animated map.
-Fixture setup opened existing scenario segments by name; acceptance keys used ordinary posted Windows keydown/up messages through SDL.
+| Case | Evidence | Result |
+|---|---|---|
+| J opens the sphere-specific spellbook hub | `ctp2_code/ui/aui_ctp2/keypress.cpp` reads the visible player's `MomSphere` value and selects the matching existing `MomSpellHub_*` segment | Source change present; gameplay acceptance pending |
+| Numeric key invokes the same visible button response as click | Shared key response path uses the existing button press completion; zero handles an explicit `0` response or unique visible X close action | Source/build present; operator check pending |
+| Spell choice opens its detail/confirmation page | Updated system use case and existing spell response sequence | Spec/source reviewed; operator check pending |
+| Summon picker opens creature detail before commit | `Scenarios/mom/scen0000/default/gamedata/mom_summon.slc` stages pending selection and routes 92 picker responses to 20 creature review pages | Static audit passed; operator check pending |
+| Summon confirmation and cancellation | Review page `1` commits after state/affordability checks; `0` clears pending choice and returns to the matching hub | Static source inspection passed; operator check pending |
+| More preserves Very Rare and Magic Status | Five sphere hubs open shared More page; More links Very Rare, Magic Status, and Back; four localization keys are unique | Static SLIC audit passed |
+| Requirement and use-case validation | UC-007 through UC-010 strict validation: 4 files, 0 errors, 0 warnings; SM-REQ-016 EARS: 1/1 | Passed |
+| Debug-SDL build and installed executable identity | Source and installed `ctp2-dbg.exe` SHA-256: `0E16588EB015DDA7E16366B2CE275255D7E74D7FE2316F33ADBAC7ECA0C3D5A0`; backup: `.tmp/clean-build/ctp2-dbg.exe.before-spellbook-j-route-20261115.exe` | Hashes match; build/install verified |
+| Full visible user journey | No game/UIWalk execution was performed | Operator acceptance pending at 800x600 |
 
-The first discovered defect was missing response action-key assignment; alertbox border ownership and uninitialized action keys were additional failures. Uninitialized keys allowed an unnumbered control to inherit a freed button's digit. All controls now initialize their key before LDL and SLIC bindings are applied.
+The project-scoped Specs MCP registry tools are absent from the live tool catalog; validated project files remain the source artifacts. The deferred UIWalk unit-test/spec task is recorded in the workspace Todo list.
 
-Limits: gameplay acceptance used Final-SDL. Debug minimap assertions and existing-save compatibility were not validated by this feature check. Two autosaves changed during fresh-game setup were restored from their pre-run backups; no test process remains.
+Sprawl review: nothing to collapse.
 
-Sprawl review: removed the duplicate message scanner and obsolete PrintWindow capture path; reused response actions and the incumbent UIWalk test hook.
+See [the 2026-11-14 receipt](ctp2-slic-numeric-choice.validation-2026-11-14.md) for its historical controls, executable details, and runtime images.
+

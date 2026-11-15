@@ -68,13 +68,22 @@ AUI_ERRCODE aui_Button::InitCommon(void)
 	return AUI_ERRCODE_OK;
 }
 
-// MoM headless driver: fire the button's action as a completed press.
+// Keep mouse, keyboard action keys, and the headless press hook on the same
+// completed-click path so SLIC UI triggers and response actions stay ordered.
 void aui_Button::InjectPress( void )
 {
+	if (IsDisabled()) return;
+	if (HandleGameSpecificLeftClick(this)) return;
+
 	if ( m_ActionFunc )
 		m_ActionFunc( this, AUI_BUTTON_ACTION_EXECUTE, 0, m_cookie );
 	else if ( m_action )
 		m_action->Execute( this, AUI_BUTTON_ACTION_EXECUTE, 0 );
+}
+
+void aui_Button::SendKeyboardAction( void )
+{
+	InjectPress();
 }
 
 AUI_ERRCODE aui_Button::ResetThis( void )
@@ -295,11 +304,7 @@ void aui_Button::MouseLDropInside( aui_MouseEvent *mouseData )
 				SetAttract(false, 0);
 			}
 
-			if ( !HandleGameSpecificLeftClick( this ) )
-			if ( m_ActionFunc )
-				m_ActionFunc( this, AUI_BUTTON_ACTION_EXECUTE, 0, m_cookie );
-			else if ( m_action )
-				m_action->Execute( this, AUI_BUTTON_ACTION_EXECUTE, 0 );
+			InjectPress();
 		}
 		else
 		{

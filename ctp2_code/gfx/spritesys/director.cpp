@@ -73,6 +73,7 @@
 #include "sci_advancescreen.h"
 #include "screenutils.h"
 #include "SelItem.h"                // g_selected_item
+#include "SlicSegment.h"            // SlicSegment::GetName
 #include "soundmanager.h"           // g_soundManager
 #include "SpriteRecord.h"
 #include "SpriteState.h"
@@ -1245,6 +1246,16 @@ public:
 
 	virtual void Execute()
 	{
+#ifdef _DEBUG
+		const MessageData *messageData = message.GetData();
+		const SlicSegment *traceSegment = const_cast<MessageData *>(messageData)->GetSlicSegment();
+		const char *traceName = traceSegment ? traceSegment->GetName() : NULL;
+		const bool traceMagicMenu = traceName && strcmp(traceName, "MagicMenu") == 0;
+		if(traceMagicMenu) {
+			DPRINTF(k_DBG_UI, ("SLIC_HANDOFF DQActionMessage::Execute valid=%d alert=%d modal=%d\n",
+				g_theMessagePool->IsValid(message), message.IsAlertBox(), messagewin_IsModalMessageDisplayed()));
+		}
+#endif
 		if (g_theMessagePool->IsValid(message)) {
 			if (message.IsAlertBox()) {
 				if (!messagewin_IsModalMessageDisplayed()) {
@@ -3048,8 +3059,21 @@ void DirectorImpl::AddPlayVictoryMovie(GAME_OVER reason, bool previouslyWon, boo
 
 void DirectorImpl::AddMessage(const Message &message)
 {
+#ifdef _DEBUG
+	const MessageData *messageData = message.GetData();
+	const SlicSegment *traceSegment = const_cast<MessageData *>(messageData)->GetSlicSegment();
+	const char *traceName = traceSegment ? traceSegment->GetName() : NULL;
+	const bool traceMagicMenu = traceName && strcmp(traceName, "MagicMenu") == 0;
+	if(traceMagicMenu) {
+		DPRINTF(k_DBG_UI, ("SLIC_HANDOFF DirectorImpl::AddMessage queueBefore=%d paused=%d lockingType=%d\n",
+			m_actionQueue->GetCount(), m_paused, m_lockingAction ? m_lockingAction->GetType() : -1));
+	}
+#endif
 	DQActionMessage *action = new DQActionMessage(message);
 	m_actionQueue->AddTail(action);
+#ifdef _DEBUG
+	if(traceMagicMenu) DPRINTF(k_DBG_UI, ("SLIC_HANDOFF DirectorImpl::AddMessage queueAfter=%d\n", m_actionQueue->GetCount()));
+#endif
 }
 
 void DirectorImpl::AddFaceoff(const Unit &attacker, const Unit &defender)

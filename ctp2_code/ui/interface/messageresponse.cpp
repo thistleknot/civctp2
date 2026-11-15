@@ -82,33 +82,48 @@ sint32 MessageResponseListItem::Compare(c3_ListItem *item2, uint32 column)
 static sint32 messageresponse_LabelDigit(ctp2_Button *button)
 {
 	const MBCHAR *text = button ? button->GetText() : NULL;
-	if (text && text[0] >= '1' && text[0] <= '9'
+	if (text && text[0] >= '0' && text[0] <= '9'
 	    && !std::isdigit(static_cast<unsigned char>(text[1])))
 	{
 		return text[0] - '0';
 	}
-	return 0;
+	return -1;
+}
+
+static bool messageresponse_IsCloseLabel(ctp2_Button *button)
+{
+	const MBCHAR *text = button ? button->GetText() : NULL;
+	return text && text[0] && !text[1]
+	    && std::toupper(static_cast<unsigned char>(text[0])) == 'X';
 }
 
 void messageresponse_AssignNumberKeys(tech_WLList<ctp2_Button *> *buttons)
 {
 	sint32 counts[10] = { 0 };
+	sint32 closeCount = 0;
 	ListPos position = buttons->GetHeadPosition();
 	for (size_t i = buttons->L(); i; --i)
 	{
 		ctp2_Button *button = buttons->GetNext(position);
 		sint32 digit = messageresponse_LabelDigit(button);
-		if (digit > 0)
+		if (digit >= 0)
 			++counts[digit];
+		else if (messageresponse_IsCloseLabel(button))
+			++closeCount;
 	}
 
+	// A literal zero choice wins over the close-button alias so the binding
+	// remains unambiguous on pages that intentionally offer both responses.
 	position = buttons->GetHeadPosition();
 	for (size_t i = buttons->L(); i; --i)
 	{
 		ctp2_Button *button = buttons->GetNext(position);
 		sint32 digit = messageresponse_LabelDigit(button);
-		if (digit > 0 && counts[digit] == 1)
+		if (digit >= 0 && counts[digit] == 1)
 			button->SetActionKey(static_cast<uint32>('0' + digit));
+		else if (digit < 0 && counts[0] == 0 && closeCount == 1
+		         && messageresponse_IsCloseLabel(button))
+			button->SetActionKey('0');
 	}
 }
 

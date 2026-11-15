@@ -102,6 +102,8 @@
 
 #include "SlicEngine.h"
 #include "SlicObject.h"
+#include "SlicArray.h"
+#include "SlicNamedSymbol.h"
 #include "ScriptTargetMode.h"
 
 #include "segmentlist.h"
@@ -424,11 +426,34 @@ sint32 ui_HandleKeypress(WPARAM wParam, LPARAM lParam)
 	// path is dead (no AddTrigger callers), so fire the segment directly.
 	if (static_cast<char>(wParam) == 'j' && g_slicEngine && g_selected_item)
 	{
-		if (g_slicEngine->GetSegment("MagicMenu"))
+		const PLAYER_INDEX visiblePlayer = g_selected_item->GetVisiblePlayer();
+		const char *segmentName = "MagicMenu";
+		SlicNamedSymbol *sphereSymbol = g_slicEngine->GetSymbol("MomSphere");
+		SlicArray *sphereArray = sphereSymbol ? sphereSymbol->GetArray() : NULL;
+		SS_TYPE sphereType = SS_TYPE_BAD;
+		SlicStackValue sphereValue;
+
+		// MoM's Workings shortcut opens the player's sphere hub directly.
+		// Read that same persisted SLIC sphere value so J lands on the same page;
+		// retain MagicMenu when the MoM symbol is absent or has an invalid value.
+		if (sphereArray && sphereArray->Lookup(visiblePlayer, sphereType, sphereValue) &&
+			sphereType == SS_TYPE_INT)
 		{
-			SlicObject *so = new SlicObject("MagicMenu");
-			so->AddRecipient(g_selected_item->GetVisiblePlayer());
-			so->AddPlayer(g_selected_item->GetVisiblePlayer());
+			switch (sphereValue.m_int)
+			{
+				case 1: segmentName = "MomSpellHub_life"; break;
+				case 2: segmentName = "MomSpellHub_nature"; break;
+				case 3: segmentName = "MomSpellHub_sorcery"; break;
+				case 4: segmentName = "MomSpellHub_death"; break;
+				case 5: segmentName = "MomSpellHub_chaos"; break;
+			}
+		}
+
+		if (g_slicEngine->GetSegment(segmentName))
+		{
+			SlicObject *so = new SlicObject(segmentName);
+			so->AddRecipient(visiblePlayer);
+			so->AddPlayer(visiblePlayer);
 			g_slicEngine->Execute(so);
 			return 0;
 		}
